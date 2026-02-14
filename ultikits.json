@@ -1,0 +1,6 @@
+{
+  "identifyString": "ultimenu",
+  "name": "UltiMenu",
+  "shortDescription": "可自定义GUI菜单构建器，支持YAML配置、按钮命令、经济扣费、子菜单、物品绑定和PlaceholderAPI。",
+  "categoryId": 1
+}

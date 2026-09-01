@@ -3,7 +3,7 @@ package com.ultikits.plugins.menu.commands;
 import com.ultikits.plugins.menu.gui.CustomMenuGui;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
-import com.ultikits.ultitools.abstracts.AbstractCommandExecutor;
+import com.ultikits.ultitools.abstracts.command.BaseCommandExecutor;
 import com.ultikits.ultitools.annotations.command.CmdExecutor;
 import com.ultikits.ultitools.annotations.command.CmdMapping;
 import com.ultikits.ultitools.annotations.command.CmdParam;
@@ -28,7 +28,7 @@ import java.util.List;
         alias = {"menu"}
 )
 @CmdTarget(CmdTarget.CmdTargetType.BOTH)
-public class MenuCommands extends AbstractCommandExecutor {
+public class MenuCommands extends BaseCommandExecutor {
 
     private final UltiToolsPlugin plugin;
     private final MenuService menuService;

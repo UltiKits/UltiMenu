@@ -32,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
@@ -42,8 +43,14 @@ class CustomMenuGuiTest {
 
     @BeforeEach
     void setUp() {
+        MockBukkit.mock();
         mockPlayer = mock(Player.class);
         when(mockPlayer.getName()).thenReturn("TestPlayer");
+    }
+
+    @AfterEach
+    void tearDown() {
+        MockBukkit.unmock();
     }
 
     /**

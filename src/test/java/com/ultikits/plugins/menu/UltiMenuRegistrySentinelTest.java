@@ -6,23 +6,37 @@ import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockbukkit.mockbukkit.MockBukkit;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * Reopen guard (TEST-03): fails the build the moment this module's tests stop being able to
+ * reach a live Bukkit registry, even though the {@code mockbukkit-v1.21} dependency by itself
+ * (via its {@code java.util.ServiceLoader}-registered {@code RegistryAccess} provider) makes a
+ * bare registry constant resolve regardless of whether a live server was ever bootstrapped.
+ * <p>
+ * Every assertion below therefore depends on the <em>live server</em> path, not the
+ * ServiceLoader-only path.
+ * <p>
+ * Deliberately bootstraps through {@link MockBukkitSupport#mock()}/{@link MockBukkitSupport#unmock()}
+ * — the module's one shared test-time bootstrap entry point, also used by {@code CustomMenuGuiTest}
+ * — rather than calling {@code MockBukkit.mock()} itself. A sentinel that mocks its own unrelated
+ * live server stays green even after the shared bootstrap is removed or broken, which defeats the
+ * reopen guard this class exists to provide.
+ */
 public class UltiMenuRegistrySentinelTest {
 
     @BeforeEach
     void setUp() {
-        MockBukkit.mock();
+        MockBukkitSupport.mock();
     }
 
     @AfterEach
     void tearDown() {
-        MockBukkit.unmock();
+        MockBukkitSupport.unmock();
     }
 
     @Test

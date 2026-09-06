@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.ultikits.plugins.menu.MockBukkitSupport;
 import com.ultikits.plugins.menu.config.MenuConfig;
 import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
@@ -32,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
@@ -43,14 +43,14 @@ class CustomMenuGuiTest {
 
     @BeforeEach
     void setUp() {
-        MockBukkit.mock();
+        MockBukkitSupport.mock();
         mockPlayer = mock(Player.class);
         when(mockPlayer.getName()).thenReturn("TestPlayer");
     }
 
     @AfterEach
     void tearDown() {
-        MockBukkit.unmock();
+        MockBukkitSupport.unmock();
     }
 
     /**

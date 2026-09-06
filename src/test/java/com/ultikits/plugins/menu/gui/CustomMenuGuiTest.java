@@ -43,6 +43,21 @@ class CustomMenuGuiTest {
 
     @BeforeEach
     void setUp() {
+        // This bootstrap is NOT what makes this class's Bukkit registry constants
+        // (Material.X, InventoryType.X) resolve. That comes from mockbukkit-v1.21 simply being on
+        // the test classpath: the jar registers java.util.ServiceLoader providers for
+        // io.papermc.paper.registry.RegistryAccess and io.papermc.paper.ServerBuildInfo, and
+        // constant resolution needs nothing more than the provider. Measured: with these
+        // mock()/unmock() calls removed and the dependency kept, the suite is 128/128 green under
+        // three surefire run orders; with the dependency off the classpath instead,
+        // InventoryType's static initialiser fails with ExceptionInInitializerError.
+        //
+        // A live server is only needed to construct a real item (new ItemStack(...), real
+        // ItemMeta), which this class never does — it references Material constants only.
+        //
+        // The bootstrap is kept because it gives MockBukkitSupport a second real consumer besides
+        // UltiMenuRegistrySentinelTest, so a break in the module's one shared test-time bootstrap
+        // shows up here too rather than only in the sentinel.
         MockBukkitSupport.mock();
         mockPlayer = mock(Player.class);
         when(mockPlayer.getName()).thenReturn("TestPlayer");

@@ -53,10 +53,18 @@ class ItemBindListenerTest {
         ItemStack item = mock(ItemStack.class);
         ItemMeta meta = mock(ItemMeta.class);
 
+        // Off-hand fixture: ItemBindListener only ever reads getType() on this value (to check
+        // it is not AIR before deciding whether to try matching a menu against it), never
+        // getItemMeta()/getDisplayName()/getLore() — see the line-59 attribution in
+        // 14-LEDGER-UltiMenu.md. A mock stubbed for that one accessor is fully faithful and
+        // needs no live Bukkit registry, unlike a real `new ItemStack(Material.AIR)`.
+        ItemStack offHandItem = mock(ItemStack.class);
+        when(offHandItem.getType()).thenReturn(Material.AIR);
+
         when(player.getName()).thenReturn("TestPlayer");
         when(player.getInventory()).thenReturn(inventory);
         when(inventory.getItemInMainHand()).thenReturn(item);
-        when(inventory.getItemInOffHand()).thenReturn(new ItemStack(Material.AIR));
+        when(inventory.getItemInOffHand()).thenReturn(offHandItem);
         when(item.getType()).thenReturn(material);
         when(item.getItemMeta()).thenReturn(meta);
 

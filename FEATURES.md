@@ -100,9 +100,10 @@ robust command is still used, because it must work unmodified across all 18 repo
 `onPlayerInteract`), and `MenuConfig.java` (1 `@ConfigEntry` site at line 14: `click_cooldown_ms`)
 directly, not by trusting the count alone. This document's command-row count matches the
 `@CmdMapping` annotation-site count exactly (4 against 4). The `@ConfigEntry` line is the one
-reconciliation-table line this repository leaves deliberately unbalanced: 1 annotation site
+line this repository's pull request's own Annotation-site reconciliation table (D-07 — carried in
+the pull request BODY, not in this file) leaves deliberately unbalanced: 1 annotation site
 against 19 `config` rows below (1 for `click_cooldown_ms` itself, plus 18 `menu-definition` rows)
-— the reason is stated once, here and in the reconciliation table: this module's real
+— the reason is stated once, here and in that pull request table: this module's real
 configuration surface is a runtime-parsed menu-definition format that no annotation binds, see the
 Conventions entry above.
 

@@ -430,6 +430,25 @@ class CustomMenuGuiTest {
             Bukkit.getServicesManager().register(Economy.class, economy, vault, ServicePriority.Normal);
         }
 
+        /**
+         * A paid button whose click would, if allowed through, run a player command and open a
+         * sub-menu, so a denial that fails to stop the click is observable.
+         */
+        private ButtonDefinition givenPaidButtonWithFollowUps(double price) {
+            ButtonDefinition button = new ButtonDefinition();
+            button.setPrice(price);
+            button.setCloseOnClick(false);
+            button.getPlayerCommands().add("spawn");
+            button.setOpenMenu("sub");
+            return button;
+        }
+
+        private void assertFollowUpsNeverRan(MenuService menuService) {
+            verify(mockPlayer, never()).performCommand(anyString());
+            verify(menuService, never()).getMenu(anyString());
+            verify(mockPlayer, never()).closeInventory();
+        }
+
         @AfterEach
         void resetEconomy() {
             if (vault != null) {
@@ -492,15 +511,20 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
-            ButtonDefinition button = new ButtonDefinition();
-            button.setPrice(100.0);
-            button.setCloseOnClick(false);
+            ButtonDefinition button = givenPaidButtonWithFollowUps(100.0);
 
             callHandleButtonClick(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
             assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("余额不足"));
+            // The denial stops the click: exactly one message, no withdrawal attempt message, and
+            // none of the button's paid follow-up actions run.
+            assertThat(captor.getAllValues()).hasSize(1);
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("扣款失败") || msg.contains("已扣除"));
+            assertFollowUpsNeverRan(menuService);
+            // Not a guard on this module's logic: the framework's Vault bridge re-checks has() before
+            // withdrawPlayer, so this holds even if CustomMenuGui skipped its own balance check.
             verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
         }
 
@@ -519,15 +543,17 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
-            ButtonDefinition button = new ButtonDefinition();
-            button.setPrice(50.0);
-            button.setCloseOnClick(false);
+            ButtonDefinition button = givenPaidButtonWithFollowUps(50.0);
 
             callHandleButtonClick(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
             assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("扣款失败"));
+            // A refused withdrawal stops the click: no "deducted" confirmation and none of the
+            // button's paid follow-up actions run, so the player does not get them for free.
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("已扣除"));
+            assertFollowUpsNeverRan(menuService);
         }
 
         @Test

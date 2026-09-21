@@ -111,6 +111,13 @@ class CustomMenuGuiTest {
     }
 
     /**
+     * The base permission node, written out as the literal operators actually configure rather
+     * than read from the production constant: a test that reads the constant would keep passing
+     * if the node were renamed, which is precisely the regression an operator would feel.
+     */
+    private static final String BASE_NODE = "ultikits.menu.use";
+
+    /**
      * Invoke the private handleButtonClick method via reflection.
      */
     private void callHandleButtonClick(CustomMenuGui gui, ButtonDefinition button) throws Exception {
@@ -724,6 +731,7 @@ class CustomMenuGuiTest {
             ButtonDefinition button = new ButtonDefinition();
             button.setOpenMenu("sub");
             when(menuService.getMenu("sub")).thenReturn(subMenu);
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
 
             try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
                 PluginManager mockPM = mock(PluginManager.class);
@@ -758,6 +766,7 @@ class CustomMenuGuiTest {
             ButtonDefinition button = new ButtonDefinition();
             button.setOpenMenu("sub");
             when(menuService.getMenu("sub")).thenReturn(subMenu);
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
 
             try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
                 PluginManager mockPM = mock(PluginManager.class);
@@ -768,6 +777,153 @@ class CustomMenuGuiTest {
 
                 verify(mockPlayer).closeInventory();
             }
+        }
+    }
+
+    // ==================== handleButtonClick Sub-Menu Access Tests ====================
+
+    /**
+     * The sub-menu path's half of the one shared menu-access rule (UltiKits/UltiMenu#15).
+     * <p>
+     * Before the fix this path checked nothing at all — not {@code ultikits.menu.use}, and not
+     * even the sub-menu's own {@code permission} key, which both other paths did check. A
+     * {@code permission}-gated menu was therefore reachable by anyone who could click a button
+     * linking to it from a menu he was already allowed to see, which is the one place a menu's
+     * own key is most likely to be the thing an operator relied on.
+     * <p>
+     * <b>How the two outcomes are told apart.</b> Navigation is observed as the scheduled task
+     * that opens the sub-menu on the next tick — {@code BukkitScheduler#runTask} — plus the
+     * closing of the current inventory. A refusal asserts the negative of BOTH, plus the refusal
+     * message, and each refusal test is paired with an allowed case built on the same fixture, so
+     * "never scheduled" cannot be satisfied by a click that failed for some earlier reason.
+     */
+    @Nested
+    @DisplayName("Button Sub-Menu Access Tests (the sub-menu's own permission + the base node)")
+    class ButtonSubMenuAccessTests {
+
+        private MenuDefinition subMenu(String permission) {
+            MenuDefinition subMenu = new MenuDefinition();
+            subMenu.setFileName("sub");
+            subMenu.setTitle("Sub Menu");
+            subMenu.setSize(9);
+            subMenu.setPermission(permission);
+            return subMenu;
+        }
+
+        private ButtonDefinition navigatingButton() {
+            ButtonDefinition button = new ButtonDefinition();
+            button.setOpenMenu("sub");
+            return button;
+        }
+
+        /**
+         * Clicks the button with {@code Bukkit} statically mocked, and reports whether the
+         * sub-menu was scheduled to open. `closeInventory` is asserted by the caller.
+         */
+        private boolean clickAndReportScheduled(CustomMenuGui gui, ButtonDefinition button) throws Exception {
+            try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
+                PluginManager mockPM = mock(PluginManager.class);
+                Plugin mockUltiTools = mock(Plugin.class);
+                BukkitScheduler mockScheduler = mock(BukkitScheduler.class);
+
+                mockedBukkit.when(Bukkit::getPluginManager).thenReturn(mockPM);
+                when(mockPM.getPlugin("UltiTools")).thenReturn(mockUltiTools);
+                mockedBukkit.when(Bukkit::getScheduler).thenReturn(mockScheduler);
+                when(mockScheduler.runTask(any(Plugin.class), any(Runnable.class))).thenReturn(mock(BukkitTask.class));
+
+                callHandleButtonClick(gui, button);
+
+                return !mockingDetails(mockScheduler).getInvocations().isEmpty();
+            }
+        }
+
+        private void assertRefused(boolean scheduled) {
+            assertThat(scheduled).as("a refused sub-menu must never be scheduled to open").isFalse();
+            verify(mockPlayer, never()).closeInventory();
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("没有权限"));
+        }
+
+        private void assertOpened(boolean scheduled) {
+            assertThat(scheduled).as("an allowed sub-menu is scheduled to open on the next tick").isTrue();
+            verify(mockPlayer).closeInventory();
+            verify(mockPlayer, never()).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should refuse when the player lacks the sub-menu's own permission")
+        void shouldRefuseWithoutSubMenuPermission() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should open when the player holds the sub-menu's own permission")
+        void shouldOpenWithSubMenuPermission() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(true);
+
+            assertOpened(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should refuse when the player lacks the base node, even for a sub-menu with no permission")
+        void shouldRefuseWithoutBaseNode() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu(null));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should open when the player holds the base node and the sub-menu sets no permission")
+        void shouldOpenWithBaseNodeOnly() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu(null));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+
+            assertOpened(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should judge the sub-menu's permission, not the parent menu's")
+        void shouldCheckTheSubMenuNotTheParent() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+
+            // The parent is a menu this player IS allowed to see — the situation the issue
+            // describes, where being inside the parent is what the sub-menu's own key was
+            // supposed to be independent of.
+            MenuDefinition parent = createMinimalMenu();
+            parent.setPermission("parent.menu");
+            CustomMenuGui gui = createGui(parent, plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("parent.menu")).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
         }
     }
 

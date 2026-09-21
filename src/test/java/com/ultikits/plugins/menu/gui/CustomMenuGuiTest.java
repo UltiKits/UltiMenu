@@ -976,12 +976,18 @@ class CustomMenuGuiTest {
             }
         }
 
+        /**
+         * The message is matched on {@code 打开此菜单} ("open this menu") rather than the shorter
+         * {@code 没有权限} ("no permission"), which is a prefix of the BUTTON refusal as well —
+         * and a button refusal reaching here would be a different defect wearing this one's
+         * clothes.
+         */
         private void assertRefused(boolean scheduled) {
             assertThat(scheduled).as("a refused sub-menu must never be scheduled to open").isFalse();
             verify(mockPlayer, never()).closeInventory();
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
-            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("没有权限"));
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
         }
 
         private void assertOpened(boolean scheduled) {

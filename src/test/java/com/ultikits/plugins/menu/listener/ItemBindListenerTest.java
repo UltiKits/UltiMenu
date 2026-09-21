@@ -104,20 +104,6 @@ class ItemBindListenerTest {
     private static final String BASE_NODE = "ultikits.menu.use";
 
     /**
-     * Invoke listener and catch expected NullPointerException from
-     * obliviate-invs InventoryAPI not being initialized in test environment.
-     * We verify event.setCancelled(true) was called BEFORE the exception.
-     */
-    private void invokeAndCatchGuiError(PlayerInteractEvent event) {
-        try {
-            listener.onPlayerInteract(event);
-        } catch (NullPointerException e) {
-            // Expected: obliviate-invs InventoryAPI not initialized in tests
-            // The event was already matched and cancelled before GUI open fails
-        }
-    }
-
-    /**
      * Asserts the bound item actually opened its menu.
      * <p>
      * Reaching {@code CustomMenuGui#open()} throws obliviate-invs'
@@ -137,6 +123,10 @@ class ItemBindListenerTest {
      * Asserts the bound item was refused: the player was told so, AND the menu was never reached.
      * The second half is what stops this from passing vacuously — the absence of a message would
      * otherwise be indistinguishable from a listener that silently opened the menu.
+     * <p>
+     * The message is matched on {@code 打开此菜单} ("open this menu"), not on the shorter
+     * {@code 没有权限} ("no permission"): that shorter string is a prefix of the BUTTON refusal
+     * too, so matching it would accept the wrong refusal as though it were this one.
      */
     private void assertMenuRefused(PlayerInteractEvent event, Player player) {
         assertThatCode(() -> listener.onPlayerInteract(event))
@@ -144,7 +134,7 @@ class ItemBindListenerTest {
             .doesNotThrowAnyException();
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(player, atLeastOnce()).sendMessage(captor.capture());
-        assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("没有权限"));
+        assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
     }
 
     // ==================== Action Filtering Tests ====================
@@ -193,9 +183,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -207,9 +198,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_BLOCK, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -228,9 +220,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -279,9 +272,10 @@ class ItemBindListenerTest {
 
             String coloredName = ChatColor.translateAlternateColorCodes('&', "&6My Compass");
             Player player = createPlayerWithMainHandItem(Material.COMPASS, coloredName, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -329,9 +323,10 @@ class ItemBindListenerTest {
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null,
                 Arrays.asList("Some text", "Right click to open"));
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -388,7 +383,7 @@ class ItemBindListenerTest {
             verify(event).setCancelled(true);
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(player, atLeastOnce()).sendMessage(captor.capture());
-            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("没有权限"));
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
         }
 
         @Test
@@ -403,7 +398,7 @@ class ItemBindListenerTest {
             when(player.hasPermission("vip.menu")).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
             verify(player, never()).sendMessage(anyString());
@@ -419,7 +414,7 @@ class ItemBindListenerTest {
             when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
             verify(player, never()).sendMessage(anyString());
@@ -432,7 +427,8 @@ class ItemBindListenerTest {
      * The bound-item path's half of the one shared menu-access rule (UltiKits/UltiMenu#14).
      * <p>
      * Before the fix this path consulted only the menu's own {@code permission} key, so a menu
-     * that left that key unset — the shipped {@code menus/example.yml} does — opened for a player
+     * that imposes no per-menu node — the shipped {@code menus/example.yml} ships
+     * {@code permission: null}, which the parser reads back as absent — opened for a player
      * holding no node of this module at all, provided he could get hold of an item matching its
      * {@code bind-item}/{@code bind-name}/{@code bind-lore}. The command path never had that hole,
      * because the framework gates the command class on {@code ultikits.menu.use}; the hole was in
@@ -595,8 +591,15 @@ class ItemBindListenerTest {
         @Test
         @DisplayName("Should check main hand before off hand")
         void shouldCheckMainHandFirst() {
+            // The two menus are made distinguishable by outcome, not just by identity: the
+            // off-hand's menu is permission-gated and the player does not hold its node, so if
+            // the off-hand were consulted first the click would produce a REFUSAL, while the
+            // main hand's ungated menu produces an OPEN. Without that asymmetry both hands lead
+            // to the same observable and the test cannot tell which one won — which is what it
+            // exists to tell.
             MenuDefinition compassMenu = createBoundMenu(Material.COMPASS, null, null);
             MenuDefinition clockMenu = createBoundMenu(Material.CLOCK, null, null);
+            clockMenu.setPermission("off.hand.menu");
             when(mockMenuService.getAllMenus()).thenReturn(Arrays.asList(compassMenu, clockMenu));
 
             Player player = mock(Player.class);
@@ -614,11 +617,15 @@ class ItemBindListenerTest {
             when(offItem.getItemMeta()).thenReturn(null);
             when(inventory.getItemInOffHand()).thenReturn(offItem);
 
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("off.hand.menu")).thenReturn(false);
+
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
+            verify(player, never()).sendMessage(anyString());
         }
 
         @Test
@@ -642,9 +649,11 @@ class ItemBindListenerTest {
             when(offItem.getItemMeta()).thenReturn(null);
             when(inventory.getItemInOffHand()).thenReturn(offItem);
 
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }

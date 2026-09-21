@@ -55,6 +55,10 @@ class MenuCommandsTest {
 
     /**
      * Asserts that no sendMessage call contains the substring.
+     * <p>
+     * Callers pass the SHORT {@code 没有权限} here on purpose, the opposite choice from the
+     * refusal assertions: a test proving a menu opened wants to exclude every refusal this module
+     * can emit, not just the one it expected not to see.
      */
     private void assertNoMessageContaining(CommandSender sender, String substring) {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
@@ -144,7 +148,7 @@ class MenuCommandsTest {
 
             commands.onOpen(player, "vip");
 
-            assertSentMessageContaining(player, "没有权限");
+            assertSentMessageContaining(player, "打开此菜单");
         }
     }
 
@@ -200,7 +204,7 @@ class MenuCommandsTest {
             commands.onReload(sender);
 
             verify(mockMenuService, never()).reload();
-            assertSentMessageContaining(sender, "没有权限");
+            assertSentMessageContaining(sender, "执行此命令");
         }
 
         @Test
@@ -315,7 +319,7 @@ class MenuCommandsTest {
             assertThatCode(invocation::run)
                 .as("a refused menu must never reach CustomMenuGui#open()")
                 .doesNotThrowAnyException();
-            assertSentMessageContaining(player, "没有权限");
+            assertSentMessageContaining(player, "打开此菜单");
         }
 
         @Test

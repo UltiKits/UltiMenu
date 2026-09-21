@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import java.lang.reflect.Method;
 import java.util.*;
 
+import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
@@ -364,6 +365,30 @@ class MenuCommandsTest {
 
             assertMenuOpened(() -> commands.onOpen(player, "open-to-all"));
             assertNoMessageContaining(player, "没有权限");
+        }
+
+        @Test
+        @DisplayName("Should reject a null menu loudly rather than deciding anything about it")
+        void shouldRejectNullMenu() {
+            // MenuAccess is public static so that a future call site can use it, and a future
+            // call site is exactly the one that can forget the null check its three current
+            // callers all perform. Failing here is fail-closed either way — an exception means
+            // allowOpen never returns true, so nothing opens — but it should also say what went
+            // wrong rather than look like a permission problem.
+            Player player = mock(Player.class);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+
+            // The message is asserted exactly, and the exact text matters. Without a contract
+            // check the JVM already throws NullPointerException here — measured:
+            // `Cannot invoke "…MenuDefinition.getPermission()" because "menu" is null` — so an
+            // assertion on the type, or on any substring that message happens to contain
+            // ("menu" included), passes against code that has no contract at all. Only a
+            // message this method chose for itself distinguishes the two.
+            assertThatThrownBy(() -> MenuAccess.allowOpen(mockPlugin, player, null))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("menu must not be null");
+
+            verify(player, never()).sendMessage(anyString());
         }
 
         @Test

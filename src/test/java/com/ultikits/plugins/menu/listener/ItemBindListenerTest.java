@@ -511,6 +511,41 @@ class ItemBindListenerTest {
         }
 
         @Test
+        @DisplayName("Should stop at the refused menu rather than fall through to another menu bound to the same item")
+        void shouldNotFallThroughAfterRefusal() {
+            // Two menus bound to the same item, the first of them gated. The listener stops at the
+            // first match whether or not access is granted, so a refusal ends the interaction
+            // instead of walking on to the next menu that happens to match. That is unchanged by
+            // the access fix and is pinned here because nothing else asserts it: without it, a
+            // refusal that fell through would open the ungated menu and no test would notice.
+            //
+            // Which of two menus bound to the identical item matches first is undefined on a real
+            // server (MenuServiceImpl#menus is a plain HashMap, as FEATURES.md records); the
+            // mocked service returns a fixed order here so the test has one.
+            MenuDefinition gated = createBoundMenu(Material.COMPASS, null, null);
+            gated.setFileName("gated");
+            gated.setPermission("vip.menu");
+            MenuDefinition ungated = createBoundMenu(Material.COMPASS, null, null);
+            ungated.setFileName("ungated");
+            when(mockMenuService.getAllMenus()).thenReturn(Arrays.asList(gated, ungated));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("vip.menu")).thenReturn(false);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuRefused(event, player);
+
+            // Positive control on the same two-menu fixture: with the gated menu's node granted,
+            // the first match does open — so "nothing opened" above is the refusal being final,
+            // not the fixture failing to match anything at all.
+            Player permitted = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(permitted.hasPermission(BASE_NODE)).thenReturn(true);
+            when(permitted.hasPermission("vip.menu")).thenReturn(true);
+            assertMenuOpened(createEvent(Action.RIGHT_CLICK_AIR, permitted));
+        }
+
+        @Test
         @DisplayName("Should apply the same rule to an off-hand bound item")
         void shouldRefuseOffHandWithoutBaseNode() {
             MenuDefinition menu = createBoundMenu(Material.CLOCK, null, null);

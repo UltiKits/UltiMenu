@@ -1,6 +1,7 @@
 package com.ultikits.plugins.menu.gui;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -22,10 +23,12 @@ import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +38,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 @DisplayName("CustomMenuGui Tests")
 class CustomMenuGuiTest {
@@ -410,26 +414,47 @@ class CustomMenuGuiTest {
     @DisplayName("Button Economy Tests")
     class ButtonEconomyTests {
 
+        private Plugin vault;
+
         /**
-         * Set the private static 'economy' field on EconomyUtils via reflection.
+         * Makes a Vault economy available through the public Bukkit/Vault types only
+         * (UltiKits/UltiMenu#17): a MockBukkit plugin named {@code Vault} plus a Vault
+         * {@link Economy} registered with the live MockBukkit services manager. The framework's
+         * default economy bridge resolves exactly these on a real server, so no framework-internal
+         * seam ({@code EconomyUtils.setProvider}, {@code EconomyProvider}) is touched. UltiTools
+         * 6.3.0 removed the private {@code EconomyUtils} fields these tests used to set by
+         * reflection.
          */
-        private void setEconomy(Economy economy) throws Exception {
-            Field economyField = EconomyUtils.class.getDeclaredField("economy");
-            economyField.setAccessible(true);
-            economyField.set(null, economy);
+        private void registerVaultEconomy(Economy economy) {
+            vault = MockBukkit.createMockPlugin("Vault");
+            Bukkit.getServicesManager().register(Economy.class, economy, vault, ServicePriority.Normal);
         }
 
         /**
-         * Set the private static 'setupAttempted' field on EconomyUtils via reflection.
+         * A paid button whose click would, if allowed through, run a player command and open a
+         * sub-menu, so a denial that fails to stop the click is observable.
          */
-        private void setSetupAttempted(boolean value) throws Exception {
-            Field field = EconomyUtils.class.getDeclaredField("setupAttempted");
-            field.setAccessible(true);
-            field.set(null, value);
+        private ButtonDefinition givenPaidButtonWithFollowUps(double price) {
+            ButtonDefinition button = new ButtonDefinition();
+            button.setPrice(price);
+            button.setCloseOnClick(false);
+            button.getPlayerCommands().add("spawn");
+            button.setOpenMenu("sub");
+            return button;
+        }
+
+        private void assertFollowUpsNeverRan(MenuService menuService) {
+            verify(mockPlayer, never()).performCommand(anyString());
+            verify(menuService, never()).getMenu(anyString());
+            verify(mockPlayer, never()).closeInventory();
         }
 
         @AfterEach
         void resetEconomy() {
+            if (vault != null) {
+                Bukkit.getServicesManager().unregisterAll(vault);
+                vault = null;
+            }
             EconomyUtils.reset();
         }
 
@@ -454,9 +479,8 @@ class CustomMenuGuiTest {
         @Test
         @DisplayName("Should deny when economy is unavailable")
         void shouldDenyWhenEconomyUnavailable() throws Exception {
-            // Make isAvailable() return false by setting setupAttempted=true, economy=null
-            setSetupAttempted(true);
-            setEconomy(null);
+            // No plugin named Vault is present, so the framework's economy bridge reports the
+            // economy unavailable and isAvailable() returns false
 
             UltiToolsPlugin plugin = createMockPlugin(null);
             MenuService menuService = mock(MenuService.class);
@@ -478,7 +502,7 @@ class CustomMenuGuiTest {
         @DisplayName("Should deny when player has insufficient balance")
         void shouldDenyInsufficientBalance() throws Exception {
             Economy mockEconomy = mock(Economy.class);
-            setEconomy(mockEconomy);
+            registerVaultEconomy(mockEconomy);
             when(mockEconomy.has(mockPlayer, 100.0)).thenReturn(false);
             when(mockEconomy.format(100.0)).thenReturn("$100.00");
 
@@ -487,22 +511,28 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
-            ButtonDefinition button = new ButtonDefinition();
-            button.setPrice(100.0);
-            button.setCloseOnClick(false);
+            ButtonDefinition button = givenPaidButtonWithFollowUps(100.0);
 
             callHandleButtonClick(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
             assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("余额不足"));
+            // The denial stops the click: exactly one message, no withdrawal attempt message, and
+            // none of the button's paid follow-up actions run.
+            assertThat(captor.getAllValues()).hasSize(1);
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("扣款失败") || msg.contains("已扣除"));
+            assertFollowUpsNeverRan(menuService);
+            // Not a guard on this module's logic: the framework's Vault bridge re-checks has() before
+            // withdrawPlayer, so this holds even if CustomMenuGui skipped its own balance check.
+            verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
         }
 
         @Test
         @DisplayName("Should deny when withdrawal fails")
         void shouldDenyWhenWithdrawFails() throws Exception {
             Economy mockEconomy = mock(Economy.class);
-            setEconomy(mockEconomy);
+            registerVaultEconomy(mockEconomy);
             when(mockEconomy.has(mockPlayer, 50.0)).thenReturn(true);
             EconomyResponse failResponse = new EconomyResponse(0, 0,
                 EconomyResponse.ResponseType.FAILURE, "error");
@@ -513,22 +543,24 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
-            ButtonDefinition button = new ButtonDefinition();
-            button.setPrice(50.0);
-            button.setCloseOnClick(false);
+            ButtonDefinition button = givenPaidButtonWithFollowUps(50.0);
 
             callHandleButtonClick(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
             assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("扣款失败"));
+            // A refused withdrawal stops the click: no "deducted" confirmation and none of the
+            // button's paid follow-up actions run, so the player does not get them for free.
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("已扣除"));
+            assertFollowUpsNeverRan(menuService);
         }
 
         @Test
         @DisplayName("Should charge and confirm when withdrawal succeeds")
         void shouldChargeSuccessfully() throws Exception {
             Economy mockEconomy = mock(Economy.class);
-            setEconomy(mockEconomy);
+            registerVaultEconomy(mockEconomy);
             when(mockEconomy.has(mockPlayer, 50.0)).thenReturn(true);
             EconomyResponse successResponse = new EconomyResponse(50.0, 950.0,
                 EconomyResponse.ResponseType.SUCCESS, "");
@@ -549,6 +581,7 @@ class CustomMenuGuiTest {
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
             assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("已扣除"));
+            verify(mockEconomy).withdrawPlayer(mockPlayer, 50.0);
         }
     }
 

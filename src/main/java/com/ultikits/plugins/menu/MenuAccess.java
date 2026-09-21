@@ -5,6 +5,8 @@ import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
+import java.util.Objects;
+
 /**
  * The single rule deciding whether a player may open a menu, shared by every path that opens one.
  * <p>
@@ -54,11 +56,18 @@ public final class MenuAccess {
      * @param plugin the module instance, for {@code i18n} lookup of the refusal message
      * @param player the player trying to open the menu
      * @param menu   the menu being opened; never null — every caller resolves it from
-     *               {@code MenuService} and handles a missing menu before reaching this method
+     *               {@code MenuService} and handles a missing menu before reaching this method.
+     *               A null is a programming error at a new call site and is rejected with a
+     *               message saying so, rather than silently refused: refusing would look to the
+     *               operator exactly like a permission problem, and the throw is fail-closed
+     *               anyway, since this method then returns nothing and no menu opens
      * @return true when the menu may be opened; false when it may not, in which case the player
      *         has already been told
+     * @throws NullPointerException if {@code menu} is null
      */
     public static boolean allowOpen(UltiToolsPlugin plugin, Player player, MenuDefinition menu) {
+        Objects.requireNonNull(menu, "menu must not be null");
+
         if (!player.hasPermission(BASE_PERMISSION)) {
             deny(plugin, player);
             return false;

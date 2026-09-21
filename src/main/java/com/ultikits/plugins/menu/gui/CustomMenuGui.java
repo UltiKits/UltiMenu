@@ -1,5 +1,6 @@
 package com.ultikits.plugins.menu.gui;
 
+import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
@@ -122,6 +123,10 @@ public class CustomMenuGui extends Gui {
     /**
      * Handle button click with all logic including debounce, permissions, economy, and commands.
      * 处理按钮点击，包括防抖、权限、经济和命令等所有逻辑
+     * <p>
+     * Two different permission checks live in this method and they are not the same check: the
+     * button's own {@code permission} key gates clicking this button, while
+     * {@link MenuAccess#allowOpen} gates entering the menu a {@code open-menu} button leads to.
      *
      * @param button the button that was clicked
      */
@@ -199,6 +204,17 @@ public class CustomMenuGui extends Gui {
             MenuDefinition subMenu = menuService.getMenu(openMenu);
             if (subMenu == null) {
                 player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), openMenu));
+                return;
+            }
+
+            // Check access to the SUB-menu through the module's one menu-access rule, before
+            // anything is closed, so a refused navigation leaves the player where he was. This
+            // path used to check nothing at all — not the base node and not the sub-menu's own
+            // permission key — so a gated menu was reachable from any parent that linked to it
+            // (UltiKits/UltiMenu#15). The parent's own permission is deliberately not consulted
+            // here: the key that decides is the one on the menu being entered.
+            // 在关闭当前界面之前，用本模块唯一的菜单访问规则检查子菜单的权限。
+            if (!MenuAccess.allowOpen(plugin, player, subMenu)) {
                 return;
             }
 

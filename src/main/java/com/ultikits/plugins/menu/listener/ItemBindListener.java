@@ -1,5 +1,6 @@
 package com.ultikits.plugins.menu.listener;
 
+import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.gui.CustomMenuGui;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
@@ -158,13 +159,13 @@ public class ItemBindListener implements Listener {
             // 找到匹配的菜单
             event.setCancelled(true);
 
-            // Check permission
-            // 检查权限
-            if (menu.getPermission() != null && !menu.getPermission().isEmpty()) {
-                if (!player.hasPermission(menu.getPermission())) {
-                    player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限打开此菜单！"));
-                    return true;
-                }
+            // Check access through the module's one menu-access rule: the base node plus the
+            // menu's own permission key, exactly as the command path requires them. This path
+            // used to consult the menu's key alone, so a menu that set no key at all opened for
+            // a player holding nothing (UltiKits/UltiMenu#14).
+            // 通过本模块唯一的菜单访问规则检查权限：基础权限节点加菜单自身的权限键。
+            if (!MenuAccess.allowOpen(plugin, player, menu)) {
+                return true;
             }
 
             // Open the menu GUI

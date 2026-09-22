@@ -111,6 +111,13 @@ class CustomMenuGuiTest {
     }
 
     /**
+     * The base permission node, written out as the literal operators actually configure rather
+     * than read from the production constant: a test that reads the constant would keep passing
+     * if the node were renamed, which is precisely the regression an operator would feel.
+     */
+    private static final String BASE_NODE = "ultikits.menu.use";
+
+    /**
      * Invoke the private handleButtonClick method via reflection.
      */
     private void callHandleButtonClick(CustomMenuGui gui, ButtonDefinition button) throws Exception {
@@ -443,9 +450,36 @@ class CustomMenuGuiTest {
             return button;
         }
 
+        /**
+         * Makes the sub-menu that {@link #givenPaidButtonWithFollowUps}'s button links to exist
+         * and be permitted, so that an economy denial is unambiguously what refused the click.
+         * <p>
+         * Needed because the sub-menu is resolved and judged BEFORE the charge: leaving it
+         * unstubbed would make these tests exercise the "menu does not exist" refusal instead of
+         * the economy one, and they would stop testing what their names say.
+         */
+        private MenuDefinition givenReachableSubMenu(MenuService menuService) {
+            MenuDefinition subMenu = new MenuDefinition();
+            subMenu.setFileName("sub");
+            subMenu.setTitle("Sub Menu");
+            subMenu.setSize(9);
+            when(menuService.getMenu("sub")).thenReturn(subMenu);
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            return subMenu;
+        }
+
+        /**
+         * A denied paid click performs none of the button's follow-up actions.
+         * <p>
+         * The sub-menu clause is asserted as "resolved exactly once and never navigated to"
+         * rather than as "never resolved": resolution is a pure read that now happens as a
+         * pre-flight, before anything irreversible, and `closeInventory` is the first thing
+         * navigation does — so its absence is the direct observation that no navigation began,
+         * where "never resolved" was only ever a proxy for it.
+         */
         private void assertFollowUpsNeverRan(MenuService menuService) {
             verify(mockPlayer, never()).performCommand(anyString());
-            verify(menuService, never()).getMenu(anyString());
+            verify(menuService, times(1)).getMenu("sub");
             verify(mockPlayer, never()).closeInventory();
         }
 
@@ -511,6 +545,7 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
+            givenReachableSubMenu(menuService);
             ButtonDefinition button = givenPaidButtonWithFollowUps(100.0);
 
             callHandleButtonClick(gui, button);
@@ -543,6 +578,7 @@ class CustomMenuGuiTest {
             MenuDefinition menu = createMinimalMenu();
             CustomMenuGui gui = createGui(menu, plugin, menuService);
 
+            givenReachableSubMenu(menuService);
             ButtonDefinition button = givenPaidButtonWithFollowUps(50.0);
 
             callHandleButtonClick(gui, button);
@@ -554,6 +590,116 @@ class CustomMenuGuiTest {
             // button's paid follow-up actions run, so the player does not get them for free.
             assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("已扣除"));
             assertFollowUpsNeverRan(menuService);
+        }
+
+        @Test
+        @DisplayName("Should not charge when the sub-menu the button opens refuses the player")
+        void shouldNotChargeWhenTheSubMenuRefuses() throws Exception {
+            // A charge is irreversible: this module can take a player's currency and has no way
+            // to give it back. So every refusal a click can produce has to happen before the
+            // charge, not after it. This test is the one that pins that for the sub-menu
+            // refusal, which is the newest of them.
+            Economy mockEconomy = mock(Economy.class);
+            registerVaultEconomy(mockEconomy);
+            when(mockEconomy.has(mockPlayer, 500.0)).thenReturn(true);
+            when(mockEconomy.format(500.0)).thenReturn("$500.00");
+            when(mockEconomy.withdrawPlayer(mockPlayer, 500.0)).thenReturn(
+                new EconomyResponse(500.0, 500.0, EconomyResponse.ResponseType.SUCCESS, ""));
+
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            MenuDefinition gatedSubMenu = new MenuDefinition();
+            gatedSubMenu.setFileName("sub");
+            gatedSubMenu.setTitle("VIP");
+            gatedSubMenu.setSize(9);
+            gatedSubMenu.setPermission("menu.vip");
+            when(menuService.getMenu("sub")).thenReturn(gatedSubMenu);
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("menu.vip")).thenReturn(false);
+
+            callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+
+            // 1. the balance is untouched - the economy provider was never asked to withdraw
+            verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
+            // 2. and the player was never told he had been charged
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("已扣除"));
+            // 3. and the navigation he paid for did not happen either
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
+            verify(mockPlayer, never()).closeInventory();
+            verify(mockPlayer, never()).performCommand(anyString());
+        }
+
+        @Test
+        @DisplayName("Should not charge when the sub-menu the button opens does not exist")
+        void shouldNotChargeWhenTheSubMenuDoesNotExist() throws Exception {
+            // Same defect class as shouldNotChargeWhenTheSubMenuRefuses, reached through the
+            // other refusal in the same branch: a button pointing at a menu name that no longer
+            // resolves (renamed, deleted, or lost to a failed reload) must not bill for the
+            // navigation it cannot perform.
+            Economy mockEconomy = mock(Economy.class);
+            registerVaultEconomy(mockEconomy);
+            when(mockEconomy.has(mockPlayer, 500.0)).thenReturn(true);
+            when(mockEconomy.format(500.0)).thenReturn("$500.00");
+            when(mockEconomy.withdrawPlayer(mockPlayer, 500.0)).thenReturn(
+                new EconomyResponse(500.0, 500.0, EconomyResponse.ResponseType.SUCCESS, ""));
+
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(null);
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+
+            callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+
+            verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("已扣除"));
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("不存在"));
+            verify(mockPlayer, never()).closeInventory();
+            verify(mockPlayer, never()).performCommand(anyString());
+        }
+
+        @Test
+        @DisplayName("Should charge and navigate when the sub-menu the button opens permits the player")
+        void shouldChargeAndNavigateWhenTheSubMenuPermits() throws Exception {
+            // The positive control for the two tests above: on the same fixture shape, with the
+            // sub-menu's node granted, the charge DOES happen and the navigation follows. Without
+            // it, "never charged" could be produced by an economy fixture that never worked.
+            Economy mockEconomy = mock(Economy.class);
+            registerVaultEconomy(mockEconomy);
+            when(mockEconomy.has(mockPlayer, 500.0)).thenReturn(true);
+            when(mockEconomy.format(500.0)).thenReturn("$500.00");
+            when(mockEconomy.withdrawPlayer(mockPlayer, 500.0)).thenReturn(
+                new EconomyResponse(500.0, 500.0, EconomyResponse.ResponseType.SUCCESS, ""));
+
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            MenuDefinition gatedSubMenu = new MenuDefinition();
+            gatedSubMenu.setFileName("sub");
+            gatedSubMenu.setTitle("VIP");
+            gatedSubMenu.setSize(9);
+            gatedSubMenu.setPermission("menu.vip");
+            when(menuService.getMenu("sub")).thenReturn(gatedSubMenu);
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("menu.vip")).thenReturn(true);
+
+            callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+
+            verify(mockEconomy).withdrawPlayer(mockPlayer, 500.0);
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("已扣除"));
+            assertThat(captor.getAllValues()).noneMatch(msg -> msg.contains("打开此菜单"));
+            verify(mockPlayer).performCommand("spawn");
+            verify(mockPlayer).closeInventory();
         }
 
         @Test
@@ -724,6 +870,7 @@ class CustomMenuGuiTest {
             ButtonDefinition button = new ButtonDefinition();
             button.setOpenMenu("sub");
             when(menuService.getMenu("sub")).thenReturn(subMenu);
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
 
             try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
                 PluginManager mockPM = mock(PluginManager.class);
@@ -758,6 +905,7 @@ class CustomMenuGuiTest {
             ButtonDefinition button = new ButtonDefinition();
             button.setOpenMenu("sub");
             when(menuService.getMenu("sub")).thenReturn(subMenu);
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
 
             try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
                 PluginManager mockPM = mock(PluginManager.class);
@@ -768,6 +916,159 @@ class CustomMenuGuiTest {
 
                 verify(mockPlayer).closeInventory();
             }
+        }
+    }
+
+    // ==================== handleButtonClick Sub-Menu Access Tests ====================
+
+    /**
+     * The sub-menu path's half of the one shared menu-access rule (UltiKits/UltiMenu#15).
+     * <p>
+     * Before the fix this path checked nothing at all — not {@code ultikits.menu.use}, and not
+     * even the sub-menu's own {@code permission} key, which both other paths did check. A
+     * {@code permission}-gated menu was therefore reachable by anyone who could click a button
+     * linking to it from a menu he was already allowed to see, which is the one place a menu's
+     * own key is most likely to be the thing an operator relied on.
+     * <p>
+     * <b>How the two outcomes are told apart.</b> Navigation is observed as the scheduled task
+     * that opens the sub-menu on the next tick — {@code BukkitScheduler#runTask} — plus the
+     * closing of the current inventory. A refusal asserts the negative of BOTH, plus the refusal
+     * message, and each refusal test is paired with an allowed case built on the same fixture, so
+     * "never scheduled" cannot be satisfied by a click that failed for some earlier reason.
+     */
+    @Nested
+    @DisplayName("Button Sub-Menu Access Tests (the sub-menu's own permission + the base node)")
+    class ButtonSubMenuAccessTests {
+
+        private MenuDefinition subMenu(String permission) {
+            MenuDefinition subMenu = new MenuDefinition();
+            subMenu.setFileName("sub");
+            subMenu.setTitle("Sub Menu");
+            subMenu.setSize(9);
+            subMenu.setPermission(permission);
+            return subMenu;
+        }
+
+        private ButtonDefinition navigatingButton() {
+            ButtonDefinition button = new ButtonDefinition();
+            button.setOpenMenu("sub");
+            return button;
+        }
+
+        /**
+         * Clicks the button with {@code Bukkit} statically mocked, and reports whether the
+         * sub-menu was scheduled to open. `closeInventory` is asserted by the caller.
+         */
+        private boolean clickAndReportScheduled(CustomMenuGui gui, ButtonDefinition button) throws Exception {
+            try (MockedStatic<Bukkit> mockedBukkit = mockStatic(Bukkit.class)) {
+                PluginManager mockPM = mock(PluginManager.class);
+                Plugin mockUltiTools = mock(Plugin.class);
+                BukkitScheduler mockScheduler = mock(BukkitScheduler.class);
+
+                mockedBukkit.when(Bukkit::getPluginManager).thenReturn(mockPM);
+                when(mockPM.getPlugin("UltiTools")).thenReturn(mockUltiTools);
+                mockedBukkit.when(Bukkit::getScheduler).thenReturn(mockScheduler);
+                when(mockScheduler.runTask(any(Plugin.class), any(Runnable.class))).thenReturn(mock(BukkitTask.class));
+
+                callHandleButtonClick(gui, button);
+
+                return !mockingDetails(mockScheduler).getInvocations().isEmpty();
+            }
+        }
+
+        /**
+         * The message is matched on {@code 打开此菜单} ("open this menu") rather than the shorter
+         * {@code 没有权限} ("no permission"), which is a prefix of the BUTTON refusal as well —
+         * and a button refusal reaching here would be a different defect wearing this one's
+         * clothes.
+         */
+        private void assertRefused(boolean scheduled) {
+            assertThat(scheduled).as("a refused sub-menu must never be scheduled to open").isFalse();
+            verify(mockPlayer, never()).closeInventory();
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
+        }
+
+        private void assertOpened(boolean scheduled) {
+            assertThat(scheduled).as("an allowed sub-menu is scheduled to open on the next tick").isTrue();
+            verify(mockPlayer).closeInventory();
+            verify(mockPlayer, never()).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should refuse when the player lacks the sub-menu's own permission")
+        void shouldRefuseWithoutSubMenuPermission() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should open when the player holds the sub-menu's own permission")
+        void shouldOpenWithSubMenuPermission() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(true);
+
+            assertOpened(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should refuse when the player lacks the base node, even for a sub-menu with no permission")
+        void shouldRefuseWithoutBaseNode() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu(null));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should open when the player holds the base node and the sub-menu sets no permission")
+        void shouldOpenWithBaseNodeOnly() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu(null));
+            CustomMenuGui gui = createGui(createMinimalMenu(), plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+
+            assertOpened(clickAndReportScheduled(gui, navigatingButton()));
+        }
+
+        @Test
+        @DisplayName("Should judge the sub-menu's permission, not the parent menu's")
+        void shouldCheckTheSubMenuNotTheParent() throws Exception {
+            UltiToolsPlugin plugin = createMockPlugin(null);
+            MenuService menuService = mock(MenuService.class);
+            when(menuService.getMenu("sub")).thenReturn(subMenu("admin.sub"));
+
+            // The parent is a menu this player IS allowed to see — the situation the issue
+            // describes, where being inside the parent is what the sub-menu's own key was
+            // supposed to be independent of.
+            MenuDefinition parent = createMinimalMenu();
+            parent.setPermission("parent.menu");
+            CustomMenuGui gui = createGui(parent, plugin, menuService);
+
+            when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
+            when(mockPlayer.hasPermission("parent.menu")).thenReturn(true);
+            when(mockPlayer.hasPermission("admin.sub")).thenReturn(false);
+
+            assertRefused(clickAndReportScheduled(gui, navigatingButton()));
         }
     }
 

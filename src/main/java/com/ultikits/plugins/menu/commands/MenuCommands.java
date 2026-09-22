@@ -1,5 +1,6 @@
 package com.ultikits.plugins.menu.commands;
 
+import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.gui.CustomMenuGui;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
@@ -132,7 +133,13 @@ public class MenuCommands extends BaseCommandExecutor {
     /**
      * 打开菜单的核心逻辑
      * <p>
-     * Core logic for opening a menu
+     * Core logic for opening a menu. Access is decided by {@link MenuAccess#allowOpen}, the one
+     * rule every menu-open path in this module shares, rather than by a check written out here —
+     * three copies of the rule are what let the three paths disagree in the first place
+     * (UltiKits/UltiMenu#14, UltiKits/UltiMenu#15). Routing this path through it re-checks
+     * {@code ultikits.menu.use} that the framework's class-level {@code @CmdExecutor} already
+     * enforces for this class, deliberately: that gate protects this class only, and a rule that
+     * lives in one caller cannot be the module's rule.
      */
     private void openMenuByName(Player player, String name) {
         MenuDefinition menu = menuService.getMenu(name);
@@ -142,9 +149,7 @@ public class MenuCommands extends BaseCommandExecutor {
             return;
         }
 
-        String permission = menu.getPermission();
-        if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限打开此菜单！"));
+        if (!MenuAccess.allowOpen(plugin, player, menu)) {
             return;
         }
 

@@ -1,5 +1,6 @@
 package com.ultikits.plugins.menu.gui;
 
+import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
@@ -122,6 +123,19 @@ public class CustomMenuGui extends Gui {
     /**
      * Handle button click with all logic including debounce, permissions, economy, and commands.
      * 处理按钮点击，包括防抖、权限、经济和命令等所有逻辑
+     * <p>
+     * Two different permission checks live in this method and they are not the same check: the
+     * button's own {@code permission} key gates clicking this button, while
+     * {@link MenuAccess#allowOpen} gates entering the menu a {@code open-menu} button leads to.
+     * <p>
+     * <b>Every refusal precedes every irreversible effect.</b> The order is debounce, then the
+     * button's own permission, then resolving and authorising the sub-menu, then the charge, then
+     * the player and console commands, then the navigation or the close. Three things in that
+     * list cannot be undone — {@code EconomyUtils.withdraw}, the player commands, and the console
+     * commands (which is where item grants live) — and every refusal is decidable from state the
+     * click does not change, so no refusal has any reason to come after them. The debounce is the
+     * deliberate exception and stays first: consuming it on a refused click is what stops a
+     * refusal from being spammable.
      *
      * @param button the button that was clicked
      */
@@ -140,6 +154,30 @@ public class CustomMenuGui extends Gui {
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
             player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限使用此按钮！"));
             return;
+        }
+
+        // Resolve and authorise the sub-menu a navigating button leads to, BEFORE the charge and
+        // the commands below. Both refusals this can produce — the menu does not exist, or the
+        // player may not enter it — are decided from state the click does not change, so there is
+        // no reason for either to happen after money has moved. Placing them last meant a button
+        // with a price charged for a navigation it then refused, with no refund
+        // (gate 1 CR-01 for the access refusal, which this change introduced; the same ordering
+        // has always applied to the not-found refusal, UltiKits/UltiMenu#20).
+        // 在扣费和执行命令之前解析并校验子菜单：这两种拒绝都不依赖本次点击改变的状态。
+        MenuDefinition subMenu = null;
+        String openMenu = button.getOpenMenu();
+        if (openMenu != null && !openMenu.isEmpty()) {
+            subMenu = menuService.getMenu(openMenu);
+            if (subMenu == null) {
+                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), openMenu));
+                return;
+            }
+
+            // The key judged is the one on the menu being entered, never the parent's
+            // (UltiKits/UltiMenu#15).
+            if (!MenuAccess.allowOpen(plugin, player, subMenu)) {
+                return;
+            }
         }
 
         // Economy check
@@ -192,23 +230,19 @@ public class CustomMenuGui extends Gui {
             }
         }
 
-        // Open sub-menu if specified
-        // 如果指定，打开子菜单
-        String openMenu = button.getOpenMenu();
-        if (openMenu != null && !openMenu.isEmpty()) {
-            MenuDefinition subMenu = menuService.getMenu(openMenu);
-            if (subMenu == null) {
-                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), openMenu));
-                return;
-            }
-
+        // Open the sub-menu resolved and authorised above. Nothing is re-read or re-judged here:
+        // a non-null subMenu already means "this button navigates, the target exists, and this
+        // player may enter it".
+        // 打开上文已解析并已校验的子菜单。
+        if (subMenu != null) {
             // Close current menu and open sub-menu on next tick
             // 关闭当前菜单并在下一个 tick 打开子菜单
             player.closeInventory();
+            final MenuDefinition target = subMenu;
             org.bukkit.plugin.Plugin ultiToolsPlugin = Bukkit.getPluginManager().getPlugin("UltiTools");
             if (ultiToolsPlugin != null) {
                 Bukkit.getScheduler().runTask(ultiToolsPlugin, () -> {
-                    CustomMenuGui subMenuGui = new CustomMenuGui(player, plugin, subMenu, menuService);
+                    CustomMenuGui subMenuGui = new CustomMenuGui(player, plugin, target, menuService);
                     subMenuGui.open();
                 });
             }

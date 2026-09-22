@@ -1,6 +1,8 @@
 package com.ultikits.plugins.menu.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
@@ -95,17 +97,44 @@ class ItemBindListenerTest {
     }
 
     /**
-     * Invoke listener and catch expected NullPointerException from
-     * obliviate-invs InventoryAPI not being initialized in test environment.
-     * We verify event.setCancelled(true) was called BEFORE the exception.
+     * The base permission node, written out as the literal operators actually configure rather
+     * than read from the production constant: a test that reads the constant would keep passing
+     * if the node were renamed, which is precisely the regression an operator would feel.
      */
-    private void invokeAndCatchGuiError(PlayerInteractEvent event) {
-        try {
-            listener.onPlayerInteract(event);
-        } catch (NullPointerException e) {
-            // Expected: obliviate-invs InventoryAPI not initialized in tests
-            // The event was already matched and cancelled before GUI open fails
-        }
+    private static final String BASE_NODE = "ultikits.menu.use";
+
+    /**
+     * Asserts the bound item actually opened its menu.
+     * <p>
+     * Reaching {@code CustomMenuGui#open()} throws obliviate-invs'
+     * {@code NullPointerException("Inventory API is not initialized...")}, because no live
+     * {@code InventoryAPI} exists in a unit test. The message is asserted, not only the exception
+     * type, so an unrelated {@code NullPointerException} — a missing stub, say — cannot stand in
+     * for a menu that opened.
+     */
+    private void assertMenuOpened(PlayerInteractEvent event) {
+        assertThatThrownBy(() -> listener.onPlayerInteract(event))
+            .as("reaching CustomMenuGui#open() is what proves the bound item opened its menu")
+            .isInstanceOf(NullPointerException.class)
+            .hasMessageContaining("Inventory API is not initialized");
+    }
+
+    /**
+     * Asserts the bound item was refused: the player was told so, AND the menu was never reached.
+     * The second half is what stops this from passing vacuously — the absence of a message would
+     * otherwise be indistinguishable from a listener that silently opened the menu.
+     * <p>
+     * The message is matched on {@code 打开此菜单} ("open this menu"), not on the shorter
+     * {@code 没有权限} ("no permission"): that shorter string is a prefix of the BUTTON refusal
+     * too, so matching it would accept the wrong refusal as though it were this one.
+     */
+    private void assertMenuRefused(PlayerInteractEvent event, Player player) {
+        assertThatCode(() -> listener.onPlayerInteract(event))
+            .as("a refused bound item must never reach CustomMenuGui#open()")
+            .doesNotThrowAnyException();
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(player, atLeastOnce()).sendMessage(captor.capture());
+        assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
     }
 
     // ==================== Action Filtering Tests ====================
@@ -154,9 +183,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -168,9 +198,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_BLOCK, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -189,9 +220,10 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -240,9 +272,10 @@ class ItemBindListenerTest {
 
             String coloredName = ChatColor.translateAlternateColorCodes('&', "&6My Compass");
             Player player = createPlayerWithMainHandItem(Material.COMPASS, coloredName, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -290,9 +323,10 @@ class ItemBindListenerTest {
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null,
                 Arrays.asList("Some text", "Right click to open"));
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }
@@ -349,7 +383,7 @@ class ItemBindListenerTest {
             verify(event).setCancelled(true);
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(player, atLeastOnce()).sendMessage(captor.capture());
-            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("没有权限"));
+            assertThat(captor.getAllValues()).anyMatch(msg -> msg.contains("打开此菜单"));
         }
 
         @Test
@@ -360,28 +394,191 @@ class ItemBindListenerTest {
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             when(player.hasPermission("vip.menu")).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
             verify(player, never()).sendMessage(anyString());
         }
 
         @Test
-        @DisplayName("Should allow access when menu has no permission requirement")
+        @DisplayName("Should allow access when menu has no permission requirement and player holds the base node")
         void shouldAllowWithNoPermission() {
             MenuDefinition menu = createBoundMenu(Material.COMPASS, null, null);
             when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
 
             Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
             verify(player, never()).sendMessage(anyString());
+        }
+    }
+
+    // ==================== Base Permission Tests ====================
+
+    /**
+     * The bound-item path's half of the one shared menu-access rule (UltiKits/UltiMenu#14).
+     * <p>
+     * Before the fix this path consulted only the menu's own {@code permission} key, so a menu
+     * that imposes no per-menu node — the shipped {@code menus/example.yml} ships
+     * {@code permission: null}, which the parser reads back as absent — opened for a player
+     * holding no node of this module at all, provided he could get hold of an item matching its
+     * {@code bind-item}/{@code bind-name}/{@code bind-lore}. The command path never had that hole,
+     * because the framework gates the command class on {@code ultikits.menu.use}; the hole was in
+     * the difference between the two paths, not in either path's own code read alone.
+     * <p>
+     * Every test here uses a menu with NO {@code permission} key, so the only thing that can
+     * refuse is the base node — the exact configuration the issue reports.
+     */
+    @Nested
+    @DisplayName("Base Permission Tests (ultikits.menu.use)")
+    class BasePermissionTests {
+
+        @Test
+        @DisplayName("Should refuse a bound item when the player lacks ultikits.menu.use and the menu sets no permission")
+        void shouldRefuseWithoutBaseNode() {
+            MenuDefinition menu = createBoundMenu(Material.COMPASS, null, null);
+            when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(false);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuRefused(event, player);
+
+            // The interaction is still cancelled: the item matched a menu, so it must not also be
+            // used as an ordinary item. Refusing the menu and swallowing the item use are separate
+            // outcomes and both are asserted, because the refusal alone would be satisfied by a
+            // listener that had stopped matching the item at all.
+            verify(event).setCancelled(true);
+        }
+
+        @Test
+        @DisplayName("Should refuse a bound item when the player holds ultikits.menu.use but not the menu's own permission")
+        void shouldRefuseWithoutMenuNode() {
+            MenuDefinition menu = createBoundMenu(Material.COMPASS, null, null);
+            menu.setPermission("vip.menu");
+            when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("vip.menu")).thenReturn(false);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuRefused(event, player);
+        }
+
+        @Test
+        @DisplayName("Should open a bound item's menu when the player holds ultikits.menu.use and the menu sets no permission")
+        void shouldOpenWithBaseNode() {
+            MenuDefinition menu = createBoundMenu(Material.COMPASS, null, null);
+            when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuOpened(event);
+            verify(event).setCancelled(true);
+            verify(player, never()).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should open a bound item's menu when the player holds both the base node and the menu's own permission")
+        void shouldOpenWithBothNodes() {
+            MenuDefinition menu = createBoundMenu(Material.COMPASS, null, null);
+            menu.setPermission("vip.menu");
+            when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("vip.menu")).thenReturn(true);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuOpened(event);
+            verify(player, never()).sendMessage(anyString());
+        }
+
+        @Test
+        @DisplayName("Should stop at the refused menu rather than fall through to another menu bound to the same item")
+        void shouldNotFallThroughAfterRefusal() {
+            // Two menus bound to the same item, the first of them gated. The listener stops at the
+            // first match whether or not access is granted, so a refusal ends the interaction
+            // instead of walking on to the next menu that happens to match. That is unchanged by
+            // the access fix and is pinned here because nothing else asserts it: without it, a
+            // refusal that fell through would open the ungated menu and no test would notice.
+            //
+            // Which of two menus bound to the identical item matches first is undefined on a real
+            // server (MenuServiceImpl#menus is a plain HashMap, as FEATURES.md records); the
+            // mocked service returns a fixed order here so the test has one.
+            MenuDefinition gated = createBoundMenu(Material.COMPASS, null, null);
+            gated.setFileName("gated");
+            gated.setPermission("vip.menu");
+            MenuDefinition ungated = createBoundMenu(Material.COMPASS, null, null);
+            ungated.setFileName("ungated");
+            when(mockMenuService.getAllMenus()).thenReturn(Arrays.asList(gated, ungated));
+
+            Player player = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("vip.menu")).thenReturn(false);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuRefused(event, player);
+
+            // Positive control on the same two-menu fixture: with the gated menu's node granted,
+            // the first match does open — so "nothing opened" above is the refusal being final,
+            // not the fixture failing to match anything at all.
+            Player permitted = createPlayerWithMainHandItem(Material.COMPASS, null, null);
+            when(permitted.hasPermission(BASE_NODE)).thenReturn(true);
+            when(permitted.hasPermission("vip.menu")).thenReturn(true);
+            assertMenuOpened(createEvent(Action.RIGHT_CLICK_AIR, permitted));
+        }
+
+        @Test
+        @DisplayName("Should apply the same rule to an off-hand bound item")
+        void shouldRefuseOffHandWithoutBaseNode() {
+            MenuDefinition menu = createBoundMenu(Material.CLOCK, null, null);
+            when(mockMenuService.getAllMenus()).thenReturn(Collections.singletonList(menu));
+
+            Player player = mock(Player.class);
+            when(player.getName()).thenReturn("TestPlayer");
+            PlayerInventory inventory = mock(PlayerInventory.class);
+            when(player.getInventory()).thenReturn(inventory);
+
+            ItemStack mainItem = mock(ItemStack.class);
+            when(mainItem.getType()).thenReturn(Material.DIAMOND);
+            when(mainItem.getItemMeta()).thenReturn(null);
+            when(inventory.getItemInMainHand()).thenReturn(mainItem);
+
+            ItemStack offItem = mock(ItemStack.class);
+            when(offItem.getType()).thenReturn(Material.CLOCK);
+            when(offItem.getItemMeta()).thenReturn(null);
+            when(inventory.getItemInOffHand()).thenReturn(offItem);
+
+            when(player.hasPermission(BASE_NODE)).thenReturn(false);
+            PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
+
+            assertMenuRefused(event, player);
+
+            // Positive control on the identical fixture: with the node granted, the same off-hand
+            // item does open its menu — so the refusal above is attributable to the node and not
+            // to the off-hand fall-through failing to match at all.
+            Player permitted = mock(Player.class);
+            when(permitted.getName()).thenReturn("TestPlayer");
+            PlayerInventory permittedInventory = mock(PlayerInventory.class);
+            when(permitted.getInventory()).thenReturn(permittedInventory);
+            when(permittedInventory.getItemInMainHand()).thenReturn(mainItem);
+            when(permittedInventory.getItemInOffHand()).thenReturn(offItem);
+            when(permitted.hasPermission(BASE_NODE)).thenReturn(true);
+
+            assertMenuOpened(createEvent(Action.RIGHT_CLICK_AIR, permitted));
         }
     }
 
@@ -394,8 +591,15 @@ class ItemBindListenerTest {
         @Test
         @DisplayName("Should check main hand before off hand")
         void shouldCheckMainHandFirst() {
+            // The two menus are made distinguishable by outcome, not just by identity: the
+            // off-hand's menu is permission-gated and the player does not hold its node, so if
+            // the off-hand were consulted first the click would produce a REFUSAL, while the
+            // main hand's ungated menu produces an OPEN. Without that asymmetry both hands lead
+            // to the same observable and the test cannot tell which one won — which is what it
+            // exists to tell.
             MenuDefinition compassMenu = createBoundMenu(Material.COMPASS, null, null);
             MenuDefinition clockMenu = createBoundMenu(Material.CLOCK, null, null);
+            clockMenu.setPermission("off.hand.menu");
             when(mockMenuService.getAllMenus()).thenReturn(Arrays.asList(compassMenu, clockMenu));
 
             Player player = mock(Player.class);
@@ -413,11 +617,15 @@ class ItemBindListenerTest {
             when(offItem.getItemMeta()).thenReturn(null);
             when(inventory.getItemInOffHand()).thenReturn(offItem);
 
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("off.hand.menu")).thenReturn(false);
+
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
+            verify(player, never()).sendMessage(anyString());
         }
 
         @Test
@@ -441,9 +649,11 @@ class ItemBindListenerTest {
             when(offItem.getItemMeta()).thenReturn(null);
             when(inventory.getItemInOffHand()).thenReturn(offItem);
 
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+
             PlayerInteractEvent event = createEvent(Action.RIGHT_CLICK_AIR, player);
 
-            invokeAndCatchGuiError(event);
+            assertMenuOpened(event);
 
             verify(event).setCancelled(true);
         }

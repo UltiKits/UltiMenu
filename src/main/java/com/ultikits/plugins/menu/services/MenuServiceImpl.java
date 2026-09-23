@@ -27,6 +27,11 @@ public class MenuServiceImpl implements MenuService {
     private final PluginLogger logger;
     private final Map<String, MenuDefinition> menus = new HashMap<>();
 
+    /**
+     * The per-menu key removed by UltiKits/UltiMenu#12; see {@link #warnIfRemovedKeysPresent}.
+     */
+    private static final String REMOVED_COMMAND_KEY = "command";
+
     public MenuServiceImpl(UltiToolsPlugin plugin) {
         this.plugin = plugin;
         this.logger = plugin.getLogger();
@@ -134,6 +139,8 @@ public class MenuServiceImpl implements MenuService {
     @Nullable
     private MenuDefinition parseMenuFile(File file) {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        // Before any validation, so a file that then fails to load is still reported.
+        warnIfRemovedKeysPresent(config, file);
 
         // Validate size
         int size = config.getInt("size", 27);
@@ -145,7 +152,6 @@ public class MenuServiceImpl implements MenuService {
         MenuDefinition menu = new MenuDefinition();
         menu.setSize(size);
         menu.setTitle(config.getString("title", "Menu"));
-        menu.setCommand(config.getString("command"));
         menu.setPermission(config.getString("permission"));
 
         // Parse bind-item
@@ -176,6 +182,38 @@ public class MenuServiceImpl implements MenuService {
         }
 
         return menu;
+    }
+
+    /**
+     * Warns about a top-level key this module used to parse from a menu definition file and no
+     * longer reads, when the operator's file still carries it.
+     *
+     * <p>Menu definition files are operator-authored: every {@code .yml} file directly inside this
+     * module's {@code menus/} folder is its own menu, named by the operator. So there is no single
+     * file to check once. The check runs on exactly the files {@link #loadMenus()} parses, at the
+     * moment each is parsed &mdash; on every start and every {@code /menu reload} &mdash; and each
+     * line names the file it was found in. It runs before validation, so a file that then fails to
+     * load is reported too.
+     *
+     * <p>{@code command} was parsed and stored and read by nothing: no command was ever registered
+     * from it (UltiKits/UltiMenu#12). Only the top-level key is reported, because only the
+     * top-level key was ever read; a {@code command} key nested under a button is not this key.
+     * A key written with no value or a YAML null ({@code command:}, {@code command: null},
+     * {@code command: ~}) is not seen, because Bukkit's YAML loader drops such a key; it had
+     * nothing to lose either, since it always read back exactly as an absent key.
+     *
+     * @param config the file as parsed
+     * @param file   the file it was parsed from, named in the warning
+     */
+    private void warnIfRemovedKeysPresent(YamlConfiguration config, File file) {
+        if (config.contains(REMOVED_COMMAND_KEY)) {
+            logger.warn("UltiMenu: '" + REMOVED_COMMAND_KEY + "' in " + file.getPath()
+                    + " no longer has any effect and can be deleted from the file -- a menu is"
+                    + " opened with /menu <name>, /menu open <name>, a bound item or another"
+                    + " menu's open-menu button, and no command was ever registered from this"
+                    + " key; a menu's own slash command is requested as UltiKits/UltiMenu#23"
+                    + " (UltiKits/UltiMenu#12).");
+        }
     }
 
     /**

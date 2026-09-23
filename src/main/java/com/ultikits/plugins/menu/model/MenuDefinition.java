@@ -11,7 +11,6 @@ public class MenuDefinition {
     private String fileName;
     private int size = 27;
     private String title = "&7Menu";
-    private String command = null;
     private String permission = null;
     private Material bindItem = null;
     private String bindName = null;

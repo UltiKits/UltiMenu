@@ -596,10 +596,24 @@ class MenuServiceImplTest {
             assertThat(line).contains("UltiMenu");
             assertThat(line).contains("'command'");
             assertThat(line).contains(pathOf("legacy.yml"));
-            assertThat(line).contains("no longer has any effect");
+            // The two fragments UAT-CHECKLIST.md and FEATURES.md quote verbatim.
+            assertThat(line).contains("no longer has any effect and can be deleted from the file");
+            assertThat(line).contains("UltiKits/UltiMenu#12");
             // Where the job went, and where the feature itself is recorded.
             assertThat(line).contains("/menu <name>");
             assertThat(line).contains("UltiKits/UltiMenu#23");
+        }
+
+        @Test
+        @DisplayName("An empty-string command value is still reported")
+        void reportsEmptyStringCommand() throws IOException {
+            writeMenuYaml("blank.yml", "title: Blank\nsize: 9\ncommand: ''\nbuttons: {}");
+
+            createService();
+
+            List<String> reported = removedCommandWarnings();
+            assertThat(reported).hasSize(1);
+            assertThat(reported.get(0)).contains(pathOf("blank.yml"));
         }
 
         @Test

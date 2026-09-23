@@ -19,8 +19,8 @@ for UAT execution and issue reconciliation — the public description of these f
   unique within a repository.
 - **Menu-definition config rows use a format name, not a file name, as `<file-stem>` (repository
   extension of the grammar above).** This module's real configuration surface is not one bound
-  file but a *format* — every `.yml` file a server owner drops into `plugins/UltiTools/UltiMenu/
-  menus/` is independently parsed against the same schema (`MenuServiceImpl#parseMenuFile` /
+  file but a *format* — every `.yml` file a server owner drops into
+  `plugins/UltiTools/pluginConfig/UltiTools-Menu/menus/` is independently parsed against the same schema (`MenuServiceImpl#parseMenuFile` /
   `#parseButton`), and the operator chooses the file's name freely (`menus/example.yml`,
   `menus/rules.yml`, …). Citing any one file's name as `<file-stem>` would be arbitrary and would
   not describe the other files that use the identical schema. These 18 rows therefore use the

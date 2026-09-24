@@ -11,6 +11,7 @@ import java.util.Collections;
 
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
+import com.ultikits.plugins.menu.i18n.CatalogueText;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -37,7 +38,7 @@ class ItemBindListenerTest {
     void setUp() {
         mockPlugin = mock(UltiToolsPlugin.class);
         mockMenuService = mock(MenuService.class);
-        when(mockPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(mockPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
 
         listener = new ItemBindListener(mockPlugin, mockMenuService);
     }

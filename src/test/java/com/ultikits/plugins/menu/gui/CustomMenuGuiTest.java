@@ -17,6 +17,7 @@ import com.ultikits.plugins.menu.config.MenuConfig;
 import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
+import com.ultikits.plugins.menu.i18n.CatalogueText;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.utils.EconomyUtils;
 import net.milkbowl.vault.economy.Economy;
@@ -105,7 +106,7 @@ class CustomMenuGuiTest {
      */
     private UltiToolsPlugin createMockPlugin(MenuConfig config) {
         UltiToolsPlugin plugin = mock(UltiToolsPlugin.class);
-        when(plugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(plugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
         when(plugin.getConfig(MenuConfig.class)).thenReturn(config);
         return plugin;
     }

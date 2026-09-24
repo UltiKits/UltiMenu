@@ -94,7 +94,7 @@ public class MenuCommands extends BaseCommandExecutor {
 
         sender.sendMessage(ChatColor.GOLD + plugin.i18n("menu.list.header"));
         for (MenuDefinition menu : menus) {
-            String title = ChatColor.translateAlternateColorCodes('&', menu.getTitle());
+            String title = ChatColor.translateAlternateColorCodes('&', menu.displayTitle(plugin));
             sender.sendMessage(ChatColor.AQUA + menu.getFileName() + ChatColor.WHITE + " - " + title);
         }
     }

@@ -46,7 +46,7 @@ public class CustomMenuGui extends Gui {
     public CustomMenuGui(Player player, UltiToolsPlugin plugin, MenuDefinition menuDefinition, MenuService menuService) {
         super(player,
               "custom_menu_" + menuDefinition.getFileName(),
-              ChatColor.translateAlternateColorCodes('&', parsePlaceholders(player, menuDefinition.getTitle())),
+              ChatColor.translateAlternateColorCodes('&', parsePlaceholders(player, menuDefinition.displayTitle(plugin))),
               menuDefinition.getSize() / 9);
         this.player = player;
         this.plugin = plugin;

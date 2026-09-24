@@ -151,7 +151,7 @@ public class MenuServiceImpl implements MenuService {
 
         MenuDefinition menu = new MenuDefinition();
         menu.setSize(size);
-        menu.setTitle(config.getString("title", plugin.i18n("menu.gui.default_title")));
+        menu.setTitle(config.getString("title"));
         menu.setPermission(config.getString("permission"));
 
         // Parse bind-item

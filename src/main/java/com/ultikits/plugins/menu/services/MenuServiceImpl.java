@@ -50,7 +50,7 @@ public class MenuServiceImpl implements MenuService {
 
         File[] files = menusFolder.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null || files.length == 0) {
-            logger.warn(plugin.i18n("没有找到菜单配置文件"));
+            logger.warn(plugin.i18n("menu.log.no_files"));
             return;
         }
 
@@ -62,15 +62,15 @@ public class MenuServiceImpl implements MenuService {
                     String menuName = file.getName().replace(".yml", "").toLowerCase();
                     menu.setFileName(menuName);
                     menus.put(menuName, menu);
-                    logger.info(plugin.i18n("已加载菜单: ") + menuName);
+                    logger.info(plugin.i18n("menu.log.loaded") + menuName);
                     loadedCount++;
                 }
             } catch (Exception e) {
-                logger.warn(plugin.i18n("加载菜单失败: ") + file.getName() + " - " + e.getMessage());
+                logger.warn(plugin.i18n("menu.log.load_failed") + file.getName() + " - " + e.getMessage());
             }
         }
 
-        logger.info(String.format(plugin.i18n("共加载 %d 个菜单"), loadedCount));
+        logger.info(String.format(plugin.i18n("menu.log.loaded_count"), loadedCount));
     }
 
     @Override

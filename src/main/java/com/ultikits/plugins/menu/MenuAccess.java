@@ -83,6 +83,6 @@ public final class MenuAccess {
     }
 
     private static void deny(UltiToolsPlugin plugin, Player player) {
-        player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限打开此菜单！"));
+        player.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_open"));
     }
 }

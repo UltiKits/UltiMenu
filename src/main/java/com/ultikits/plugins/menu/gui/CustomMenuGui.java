@@ -152,7 +152,7 @@ public class CustomMenuGui extends Gui {
         // 权限检查
         String permission = button.getPermission();
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限使用此按钮！"));
+            player.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_button"));
             return;
         }
 
@@ -169,7 +169,7 @@ public class CustomMenuGui extends Gui {
         if (openMenu != null && !openMenu.isEmpty()) {
             subMenu = menuService.getMenu(openMenu);
             if (subMenu == null) {
-                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), openMenu));
+                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("menu.error.not_found"), openMenu));
                 return;
             }
 
@@ -185,21 +185,21 @@ public class CustomMenuGui extends Gui {
         double price = button.getPrice();
         if (price > 0) {
             if (!EconomyUtils.isAvailable()) {
-                player.sendMessage(ChatColor.RED + plugin.i18n("经济系统不可用！"));
+                player.sendMessage(ChatColor.RED + plugin.i18n("menu.economy.unavailable"));
                 return;
             }
 
             if (!EconomyUtils.has(player, price)) {
-                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("余额不足！需要 %s"), EconomyUtils.format(price)));
+                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("menu.economy.insufficient"), EconomyUtils.format(price)));
                 return;
             }
 
             if (!EconomyUtils.withdraw(player, price)) {
-                player.sendMessage(ChatColor.RED + plugin.i18n("扣款失败！"));
+                player.sendMessage(ChatColor.RED + plugin.i18n("menu.economy.withdraw_failed"));
                 return;
             }
 
-            player.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("已扣除 %s"), EconomyUtils.format(price)));
+            player.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("menu.economy.charged"), EconomyUtils.format(price)));
         }
 
         // Execute player commands

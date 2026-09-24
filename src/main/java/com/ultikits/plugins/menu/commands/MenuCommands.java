@@ -25,7 +25,7 @@ import java.util.List;
  */
 @CmdExecutor(
         permission = "ultikits.menu.use",
-        description = "菜单管理命令",
+        description = "menu.command.description",
         alias = {"menu"}
 )
 @CmdTarget(CmdTarget.CmdTargetType.BOTH)
@@ -58,7 +58,7 @@ public class MenuCommands extends BaseCommandExecutor {
             return;
         }
         if (!(sender instanceof Player)) {
-            sender.sendMessage(ChatColor.RED + plugin.i18n("只有玩家才能打开菜单！"));
+            sender.sendMessage(ChatColor.RED + plugin.i18n("menu.error.player_only"));
             return;
         }
         openMenuByName((Player) sender, name);
@@ -88,11 +88,11 @@ public class MenuCommands extends BaseCommandExecutor {
         Collection<MenuDefinition> menus = menuService.getAllMenus();
 
         if (menus.isEmpty()) {
-            sender.sendMessage(ChatColor.YELLOW + plugin.i18n("没有可用的菜单"));
+            sender.sendMessage(ChatColor.YELLOW + plugin.i18n("menu.list.empty"));
             return;
         }
 
-        sender.sendMessage(ChatColor.GOLD + plugin.i18n("=== 可用菜单 ==="));
+        sender.sendMessage(ChatColor.GOLD + plugin.i18n("menu.list.header"));
         for (MenuDefinition menu : menus) {
             String title = ChatColor.translateAlternateColorCodes('&', menu.getTitle());
             sender.sendMessage(ChatColor.AQUA + menu.getFileName() + ChatColor.WHITE + " - " + title);
@@ -107,13 +107,13 @@ public class MenuCommands extends BaseCommandExecutor {
     @CmdMapping(format = "reload")
     public void onReload(@CmdSender CommandSender sender) {
         if (!sender.hasPermission("ultikits.menu.admin")) {
-            sender.sendMessage(ChatColor.RED + plugin.i18n("你没有权限执行此命令！"));
+            sender.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_command"));
             return;
         }
 
         menuService.reload();
         int count = menuService.getAllMenus().size();
-        sender.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("已重新加载 %d 个菜单"), count));
+        sender.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("menu.reload.done"), count));
     }
 
     /**
@@ -145,7 +145,7 @@ public class MenuCommands extends BaseCommandExecutor {
         MenuDefinition menu = menuService.getMenu(name);
 
         if (menu == null) {
-            player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), name));
+            player.sendMessage(ChatColor.RED + String.format(plugin.i18n("menu.error.not_found"), name));
             return;
         }
 

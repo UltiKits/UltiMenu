@@ -1,2 +1,20 @@
 {
+  "menu.service.name": "自定义菜单功能",
+  "menu.log.no_files": "没有找到菜单配置文件",
+  "menu.log.loaded": "已加载菜单: ",
+  "menu.log.load_failed": "加载菜单失败: ",
+  "menu.log.loaded_count": "共加载 %d 个菜单",
+  "menu.error.not_found": "菜单 '%s' 不存在！",
+  "menu.error.no_permission_open": "你没有权限打开此菜单！",
+  "menu.error.no_permission_button": "你没有权限使用此按钮！",
+  "menu.error.no_permission_command": "你没有权限执行此命令！",
+  "menu.economy.unavailable": "经济系统不可用！",
+  "menu.economy.insufficient": "余额不足！需要 %s",
+  "menu.economy.withdraw_failed": "扣款失败！",
+  "menu.economy.charged": "已扣除 %s",
+  "menu.list.empty": "没有可用的菜单",
+  "menu.list.header": "=== 可用菜单 ===",
+  "menu.reload.done": "已重新加载 %d 个菜单",
+  "menu.command.description": "菜单管理命令",
+  "menu.error.player_only": "只有玩家才能打开菜单！"
 }

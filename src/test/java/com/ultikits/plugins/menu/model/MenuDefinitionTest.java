@@ -26,7 +26,8 @@ class MenuDefinitionTest {
             MenuDefinition menu = new MenuDefinition();
 
             assertThat(menu.getSize()).isEqualTo(27);
-            assertThat(menu.getTitle()).isEqualTo("&7Menu");
+            // Unset until a menu file sets one; shown as the language file's default title.
+            assertThat(menu.getTitle()).isNull();
             assertThat(menu.getPermission()).isNull();
             assertThat(menu.getBindItem()).isNull();
             assertThat(menu.getBindName()).isNull();

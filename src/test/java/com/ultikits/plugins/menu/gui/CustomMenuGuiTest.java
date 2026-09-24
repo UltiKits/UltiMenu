@@ -138,6 +138,17 @@ class CustomMenuGuiTest {
 
     // ==================== Placeholder Parsing Tests ====================
 
+    @Test
+    @DisplayName("A menu with no title opens with the language file's default title (gate-1 IN-01)")
+    void untitledMenuUsesTheCatalogueTitle() {
+        MenuDefinition menu = createMinimalMenu();
+        menu.setTitle(null);
+
+        CustomMenuGui gui = createGui(menu, createMockPlugin(null), mock(MenuService.class));
+
+        assertThat(gui.getTitle()).isEqualTo(CatalogueText.text("zh", "menu.gui.default_title"));
+    }
+
     @Nested
     @DisplayName("Placeholder Parsing Tests")
     class PlaceholderParsingTests {

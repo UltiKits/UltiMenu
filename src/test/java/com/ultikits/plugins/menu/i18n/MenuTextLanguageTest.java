@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -192,12 +193,24 @@ class MenuTextLanguageTest {
         }
 
         @Test
-        @DisplayName("a menu file with no title gets the Chinese default title")
-        void defaultTitle() throws IOException {
+        @DisplayName("a menu file with no title shows the default title in the language in force when it is shown")
+        void defaultTitleFollowsTheLanguageAtDisplayTime() throws IOException {
             MenuServiceImpl service = load("m.yml", "size: 9\nbuttons: {}");
-
             MenuDefinition menu = service.getMenu("m");
-            assertThat(menu.getTitle()).isEqualTo(text("zh", "menu.gui.default_title"));
+
+            // Loaded under zh, but nothing is fixed at load time: the title stays unset ...
+            assertThat(menu.getTitle()).isNull();
+
+            // ... and /menu list shows it in whichever language is in force when it runs, so a
+            // language switched by /ul reload applies without re-reading the menu files.
+            MenuService loaded = mock(MenuService.class);
+            when(loaded.getAllMenus()).thenReturn(Collections.singletonList(menu));
+            for (String code : new String[] {"en", "zh"}) {
+                CommandSender sender = mock(CommandSender.class);
+                new MenuCommands(pluginSpeaking(code), loaded).onList(sender);
+                assertThat(sent(sender)).contains(ChatColor.AQUA + "m" + ChatColor.WHITE + " - "
+                        + text(code, "menu.gui.default_title"));
+            }
         }
     }
 

@@ -7,6 +7,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- The per-menu `command` key never took effect and has been removed; it can be deleted from existing
+  menu files. A menu definition file could set a top-level `command` key, and the shipped
+  `menus/example.yml` set `command: servermenu`, but no command was ever registered from it, so
+  `/servermenu` never existed. Menus open exactly as before: `/menu <name>`, `/menu open <name>`, a
+  matching bound item, or another menu's `open-menu` button. The shipped example no longer sets the
+  key. Removing the setting is not a rejection of the feature: a menu's own slash command is
+  requested as UltiKits/UltiMenu#23 (UltiKits/UltiMenu#12).
+- A menu file that still sets `command` now logs one warning each time it is loaded — at every start
+  and every `/menu reload` — naming the module, the file and the key. Removing a key from the code does
+  not remove it from anybody's file, so without this an operator who had set it would see no trace of
+  the removal. A server first started on an earlier version still has the old example's
+  `command: servermenu` line in `menus/example.yml` and will see this warning for that file until the
+  line is deleted (UltiKits/UltiMenu#12).
+- 每个菜单的 `command` 键从未生效，现已移除；可从现有菜单文件中删除。菜单定义文件可以设置顶层 `command` 键，
+  随附的 `menus/example.yml` 也设置了 `command: servermenu`，但本模块从未根据它注册任何命令，因此 `/servermenu`
+  从未存在。打开菜单的方式与以前完全相同：`/menu <名称>`、`/menu open <名称>`、匹配的绑定物品，或另一个菜单按钮的
+  `open-menu`。随附示例不再设置该键。移除该设置并不代表否决这项功能：为菜单单独绑定斜杠命令的需求已记录为
+  UltiKits/UltiMenu#23（UltiKits/UltiMenu#12）。
+- 仍设置 `command` 的菜单文件现在每次加载时（每次启动以及每次 `/menu reload`）都会输出一条警告，点名模块、文件与
+  该键。从代码中移除一个键并不会把它从任何人的文件中移除，若没有这条警告，设置过该键的服主将看不到任何移除的痕迹。
+  在更早版本上首次启动的服务器，其 `menus/example.yml` 中仍保留旧示例的 `command: servermenu` 一行，在删除该行
+  之前会一直看到针对该文件的这条警告（UltiKits/UltiMenu#12）。
+
 ### Fixed
 
 - Uninstalling this module with `/upm uninstall UltiTools-Menu` now really removes its commands

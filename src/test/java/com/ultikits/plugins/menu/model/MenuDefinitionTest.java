@@ -2,7 +2,11 @@ package com.ultikits.plugins.menu.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 
 import org.bukkit.Material;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +27,6 @@ class MenuDefinitionTest {
 
             assertThat(menu.getSize()).isEqualTo(27);
             assertThat(menu.getTitle()).isEqualTo("&7Menu");
-            assertThat(menu.getCommand()).isNull();
             assertThat(menu.getPermission()).isNull();
             assertThat(menu.getBindItem()).isNull();
             assertThat(menu.getBindName()).isNull();
@@ -44,7 +47,6 @@ class MenuDefinitionTest {
             menu.setFileName("test");
             menu.setSize(54);
             menu.setTitle("&6Custom Title");
-            menu.setCommand("testcmd");
             menu.setPermission("test.perm");
             menu.setBindItem(Material.COMPASS);
             menu.setBindName("&6Compass");
@@ -57,12 +59,42 @@ class MenuDefinitionTest {
             assertThat(menu.getFileName()).isEqualTo("test");
             assertThat(menu.getSize()).isEqualTo(54);
             assertThat(menu.getTitle()).isEqualTo("&6Custom Title");
-            assertThat(menu.getCommand()).isEqualTo("testcmd");
             assertThat(menu.getPermission()).isEqualTo("test.perm");
             assertThat(menu.getBindItem()).isEqualTo(Material.COMPASS);
             assertThat(menu.getBindName()).isEqualTo("&6Compass");
             assertThat(menu.getBindLore()).isEqualTo("Right click");
             assertThat(menu.getButtons()).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("Removed command key (UltiKits/UltiMenu#12)")
+    class RemovedCommandKeyTests {
+
+        /**
+         * A menu definition carries nothing a per-menu command could be read from. The key was
+         * parsed and stored here and read by nothing (UltiKits/UltiMenu#12); a property that is
+         * set and never read is exactly how the false declaration survived, so its absence is the
+         * claim, checked by reflection so the test compiles whether or not the property exists.
+         */
+        @Test
+        @DisplayName("MenuDefinition declares no command property")
+        void declaresNoCommandProperty() {
+            List<String> fields = new ArrayList<>();
+            for (Field field : MenuDefinition.class.getDeclaredFields()) {
+                fields.add(field.getName());
+            }
+            List<String> methods = new ArrayList<>();
+            for (Method method : MenuDefinition.class.getDeclaredMethods()) {
+                methods.add(method.getName());
+            }
+
+            // Control: the neighbouring key that IS read (permission) is visible to the same probe.
+            assertThat(fields).contains("permission");
+            assertThat(methods).contains("getPermission", "setPermission");
+
+            assertThat(fields).doesNotContain("command");
+            assertThat(methods).doesNotContain("getCommand", "setCommand");
         }
     }
 

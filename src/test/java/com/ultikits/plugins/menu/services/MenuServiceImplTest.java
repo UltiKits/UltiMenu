@@ -3,12 +3,19 @@ package com.ultikits.plugins.menu.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -16,6 +23,7 @@ import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.invocation.Invocation;
 
 @DisplayName("MenuServiceImpl Tests")
 class MenuServiceImplTest {
@@ -497,26 +506,24 @@ class MenuServiceImplTest {
         }
     }
 
-    // ==================== Permission and Command Parsing Tests ====================
+    // ==================== Permission Parsing Tests ====================
 
     @Nested
     @DisplayName("Optional Field Parsing Tests")
     class OptionalFieldTests {
 
         @Test
-        @DisplayName("Should parse permission and command fields")
-        void shouldParsePermissionAndCommand() throws IOException {
+        @DisplayName("Should parse the permission field")
+        void shouldParsePermission() throws IOException {
             writeMenuYaml("test.yml",
                 "title: Test\nsize: 9\n" +
                 "permission: 'vip.menu'\n" +
-                "command: 'mymenu'\n" +
                 "buttons: {}"
             );
 
             MenuServiceImpl service = createService();
             MenuDefinition menu = service.getMenu("test");
             assertThat(menu.getPermission()).isEqualTo("vip.menu");
-            assertThat(menu.getCommand()).isEqualTo("mymenu");
         }
 
         @Test
@@ -527,7 +534,213 @@ class MenuServiceImplTest {
             MenuServiceImpl service = createService();
             MenuDefinition menu = service.getMenu("test");
             assertThat(menu.getPermission()).isNull();
-            assertThat(menu.getCommand()).isNull();
+        }
+    }
+
+    // ==================== Removed per-menu command key (UltiKits/UltiMenu#12) ====================
+
+    /**
+     * Every warning string this service handed to its logger, from any {@code warn} overload.
+     * Collected from the mock's recorded invocations rather than through one overload's matcher,
+     * so a warning routed through a different overload is still seen (and, being a template
+     * rather than the formatted line, fails the content assertions instead of vanishing).
+     */
+    private List<String> warnings() {
+        List<String> out = new ArrayList<>();
+        for (Invocation invocation : mockingDetails(mockLogger).getInvocations()) {
+            if (!"warn".equals(invocation.getMethod().getName())) {
+                continue;
+            }
+            for (Object argument : invocation.getArguments()) {
+                if (argument instanceof String) {
+                    out.add((String) argument);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** The warnings that report a leftover top-level {@code command} key. */
+    private List<String> removedCommandWarnings() {
+        List<String> out = new ArrayList<>();
+        for (String warning : warnings()) {
+            if (warning.contains("'command'")) {
+                out.add(warning);
+            }
+        }
+        return out;
+    }
+
+    private String pathOf(String fileName) {
+        return new File(menusFolder, fileName).getPath();
+    }
+
+    @Nested
+    @DisplayName("Removed command key residue warning")
+    class RemovedCommandKeyTests {
+
+        @Test
+        @DisplayName("A menu file that still sets command is reported, naming module, file and key")
+        void reportsLeftoverCommandNamingModuleFileAndKey() throws IOException {
+            writeMenuYaml("legacy.yml",
+                "title: Legacy\nsize: 9\n" +
+                "command: 'servermenu'\n" +
+                "buttons: {}"
+            );
+
+            createService();
+
+            List<String> reported = removedCommandWarnings();
+            assertThat(reported).hasSize(1);
+            String line = reported.get(0);
+            assertThat(line).contains("UltiMenu");
+            assertThat(line).contains("'command'");
+            assertThat(line).contains(pathOf("legacy.yml"));
+            // The two fragments UAT-CHECKLIST.md and FEATURES.md quote verbatim.
+            assertThat(line).contains("no longer has any effect and can be deleted from the file");
+            assertThat(line).contains("UltiKits/UltiMenu#12");
+            // Where the job went, and where the feature itself is recorded.
+            assertThat(line).contains("/menu <name>");
+            assertThat(line).contains("UltiKits/UltiMenu#23");
+        }
+
+        @Test
+        @DisplayName("An empty-string command value is still reported")
+        void reportsEmptyStringCommand() throws IOException {
+            writeMenuYaml("blank.yml", "title: Blank\nsize: 9\ncommand: ''\nbuttons: {}");
+
+            createService();
+
+            List<String> reported = removedCommandWarnings();
+            assertThat(reported).hasSize(1);
+            assertThat(reported.get(0)).contains(pathOf("blank.yml"));
+        }
+
+        @Test
+        @DisplayName("The menu still loads with every other key when command is present")
+        void menuStillLoadsWhenCommandIsPresent() throws IOException {
+            writeMenuYaml("legacy.yml",
+                "title: Legacy\nsize: 18\n" +
+                "command: 'servermenu'\n" +
+                "permission: 'legacy.open'\n" +
+                "buttons:\n" +
+                "  b:\n" +
+                "    item: STONE\n"
+            );
+
+            MenuServiceImpl service = createService();
+
+            MenuDefinition menu = service.getMenu("legacy");
+            assertThat(menu).isNotNull();
+            assertThat(menu.getTitle()).isEqualTo("Legacy");
+            assertThat(menu.getSize()).isEqualTo(18);
+            assertThat(menu.getPermission()).isEqualTo("legacy.open");
+            assertThat(menu.getButtons()).containsKey("b");
+        }
+
+        @Test
+        @DisplayName("A menu file without command produces no such warning")
+        void noWarningWithoutCommand() throws IOException {
+            writeMenuYaml("clean.yml", "title: Clean\nsize: 9\npermission: 'x'\nbuttons: {}");
+
+            createService();
+
+            assertThat(removedCommandWarnings()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("Each file is reported separately and only the files that set the key")
+        void eachFileIsReportedSeparately() throws IOException {
+            writeMenuYaml("first.yml", "title: A\nsize: 9\ncommand: a\nbuttons: {}");
+            writeMenuYaml("second.yml", "title: B\nsize: 9\ncommand: b\nbuttons: {}");
+            writeMenuYaml("third.yml", "title: C\nsize: 9\nbuttons: {}");
+
+            createService();
+
+            List<String> reported = removedCommandWarnings();
+            assertThat(reported).hasSize(2);
+            assertThat(reported).anySatisfy(line -> assertThat(line).contains(pathOf("first.yml")));
+            assertThat(reported).anySatisfy(line -> assertThat(line).contains(pathOf("second.yml")));
+            assertThat(reported).noneSatisfy(line -> assertThat(line).contains(pathOf("third.yml")));
+        }
+
+        @Test
+        @DisplayName("A file that fails to load is still checked for the key")
+        void fileThatFailsSizeValidationIsStillChecked() throws IOException {
+            writeMenuYaml("broken.yml", "title: Broken\nsize: 10\ncommand: broken\nbuttons: {}");
+
+            MenuServiceImpl service = createService();
+
+            assertThat(service.getMenu("broken")).isNull();
+            List<String> reported = removedCommandWarnings();
+            assertThat(reported).hasSize(1);
+            assertThat(reported.get(0)).contains(pathOf("broken.yml"));
+        }
+
+        @Test
+        @DisplayName("A command key nested under a button is not the removed key")
+        void nestedCommandIsNotReported() throws IOException {
+            writeMenuYaml("nested.yml",
+                "title: Nested\nsize: 9\n" +
+                "buttons:\n" +
+                "  b:\n" +
+                "    item: STONE\n" +
+                "    command: 'not-top-level'\n"
+            );
+
+            createService();
+
+            assertThat(removedCommandWarnings()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("The warning repeats on every reload while the key stays in the file")
+        void warningRepeatsOnReload() throws IOException {
+            writeMenuYaml("legacy.yml", "title: Legacy\nsize: 9\ncommand: servermenu\nbuttons: {}");
+
+            MenuServiceImpl service = createService();
+            assertThat(removedCommandWarnings()).hasSize(1);
+
+            service.reload();
+            assertThat(removedCommandWarnings()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("The shipped example menu does not set command")
+        void shippedExampleDoesNotSetCommand() throws IOException {
+            YamlConfiguration example = loadShippedExample();
+
+            // Control: the probe reads the real shipped file (its title and bind key are there).
+            assertThat(example.getString("title")).contains("Server Menu");
+            assertThat(example.contains("bind-item")).isTrue();
+
+            assertThat(example.contains("command")).isFalse();
+        }
+
+        @Test
+        @DisplayName("A server loading only the shipped example logs no removed-key warning")
+        void shippedExampleLogsNoRemovedKeyWarning() throws IOException {
+            try (InputStream in = shippedExampleStream()) {
+                Files.copy(in, new File(menusFolder, "example.yml").toPath());
+            }
+
+            MenuServiceImpl service = createService();
+
+            assertThat(service.getMenu("example")).isNotNull();
+            assertThat(removedCommandWarnings()).isEmpty();
+        }
+
+        private InputStream shippedExampleStream() {
+            InputStream in = MenuServiceImplTest.class.getClassLoader()
+                .getResourceAsStream("menus/example.yml");
+            assertThat(in).as("shipped menus/example.yml on the test classpath").isNotNull();
+            return in;
+        }
+
+        private YamlConfiguration loadShippedExample() throws IOException {
+            try (Reader reader = new InputStreamReader(shippedExampleStream(), StandardCharsets.UTF_8)) {
+                return YamlConfiguration.loadConfiguration(reader);
+            }
         }
     }
 }

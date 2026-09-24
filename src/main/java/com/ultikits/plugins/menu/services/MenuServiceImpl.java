@@ -62,11 +62,11 @@ public class MenuServiceImpl implements MenuService {
                     String menuName = file.getName().replace(".yml", "").toLowerCase();
                     menu.setFileName(menuName);
                     menus.put(menuName, menu);
-                    logger.info(plugin.i18n("menu.log.loaded") + menuName);
+                    logger.info(String.format(plugin.i18n("menu.log.loaded"), menuName));
                     loadedCount++;
                 }
             } catch (Exception e) {
-                logger.warn(plugin.i18n("menu.log.load_failed") + file.getName() + " - " + e.getMessage());
+                logger.warn(String.format(plugin.i18n("menu.log.load_failed"), file.getName(), e.getMessage()));
             }
         }
 
@@ -96,7 +96,7 @@ public class MenuServiceImpl implements MenuService {
 
     @Override
     public String getName() {
-        return "自定义菜单功能";
+        return plugin.i18n("menu.service.name");
     }
 
     @Override
@@ -125,7 +125,7 @@ public class MenuServiceImpl implements MenuService {
                 Files.copy(is, exampleFile.toPath());
             }
         } catch (IOException e) {
-            logger.warn("Failed to copy example menu: " + e.getMessage());
+            logger.warn(String.format(plugin.i18n("menu.log.copy_example_failed"), e.getMessage()));
         }
     }
 
@@ -145,13 +145,13 @@ public class MenuServiceImpl implements MenuService {
         // Validate size
         int size = config.getInt("size", 27);
         if (size < 9 || size > 54 || size % 9 != 0) {
-            logger.warn("Invalid menu size " + size + " in " + file.getName() + " (must be 9-54 and multiple of 9)");
+            logger.warn(String.format(plugin.i18n("menu.log.invalid_size"), size, file.getName()));
             return null;
         }
 
         MenuDefinition menu = new MenuDefinition();
         menu.setSize(size);
-        menu.setTitle(config.getString("title", "Menu"));
+        menu.setTitle(config.getString("title", plugin.i18n("menu.gui.default_title")));
         menu.setPermission(config.getString("permission"));
 
         // Parse bind-item
@@ -207,12 +207,7 @@ public class MenuServiceImpl implements MenuService {
      */
     private void warnIfRemovedKeysPresent(YamlConfiguration config, File file) {
         if (config.contains(REMOVED_COMMAND_KEY)) {
-            logger.warn("UltiMenu: '" + REMOVED_COMMAND_KEY + "' in " + file.getPath()
-                    + " no longer has any effect and can be deleted from the file -- a menu is"
-                    + " opened with /menu <name>, /menu open <name>, a bound item or another"
-                    + " menu's open-menu button, and no command was ever registered from this"
-                    + " key; a menu's own slash command is requested as UltiKits/UltiMenu#23"
-                    + " (UltiKits/UltiMenu#12).");
+            logger.warn(String.format(plugin.i18n("menu.log.removed_command_key"), REMOVED_COMMAND_KEY, file.getPath()));
         }
     }
 
@@ -234,13 +229,13 @@ public class MenuServiceImpl implements MenuService {
         // Parse item material (required)
         String itemStr = section.getString("item");
         if (itemStr == null) {
-            logger.warn("Button " + buttonId + " in " + fileName + " has no item specified, skipping");
+            logger.warn(String.format(plugin.i18n("menu.log.button_no_item"), buttonId, fileName));
             return null;
         }
 
         Material material = parseMaterial(itemStr);
         if (material == null) {
-            logger.warn("Button " + buttonId + " in " + fileName + " has invalid material: " + itemStr + ", skipping");
+            logger.warn(String.format(plugin.i18n("menu.log.button_invalid_material"), buttonId, fileName, itemStr));
             return null;
         }
 

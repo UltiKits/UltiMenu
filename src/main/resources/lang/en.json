@@ -1,8 +1,8 @@
 {
   "menu.service.name": "Custom Menu",
   "menu.log.no_files": "No menu configuration files found",
-  "menu.log.loaded": "Menu loaded: ",
-  "menu.log.load_failed": "Failed to load menu: ",
+  "menu.log.loaded": "Menu loaded: %s",
+  "menu.log.load_failed": "Failed to load menu: %s - %s",
   "menu.log.loaded_count": "Loaded %d menus",
   "menu.error.not_found": "Menu '%s' does not exist!",
   "menu.error.no_permission_open": "You don't have permission to open this menu!",
@@ -15,5 +15,17 @@
   "menu.list.empty": "No menus available",
   "menu.list.header": "=== Available Menus ===",
   "menu.reload.done": "Reloaded %d menus",
-  "=== 自定义菜单 ===\n/menu <名字> 打开菜单\n/menu open <名字> 打开菜单\n/menu list 列出所有菜单\n/menu reload 重新加载菜单\n================": "=== Custom Menu ===\n/menu <name> Open a menu\n/menu open <name> Open a menu\n/menu list List all menus\n/menu reload Reload all menus\n================"
+  "menu.command.description": "Menu management command",
+  "menu.error.player_only": "Only players can open menus!",
+  "menu.help.header": "=== UltiMenu Command Help ===",
+  "menu.help.quick_open": "Open the named menu",
+  "menu.help.open": "Open the named menu (explicit form)",
+  "menu.help.list": "List all available menus",
+  "menu.help.reload": "Reload the menu configuration (requires admin permission)",
+  "menu.gui.default_title": "Menu",
+  "menu.log.copy_example_failed": "Failed to copy example menu: %s",
+  "menu.log.invalid_size": "Invalid menu size %d in %s (must be 9-54 and multiple of 9)",
+  "menu.log.removed_command_key": "UltiMenu: '%s' in %s no longer has any effect and can be deleted from the file -- a menu is opened with /menu <name>, /menu open <name>, a bound item or another menu's open-menu button, and no command was ever registered from this key; a menu's own slash command is requested as UltiKits/UltiMenu#23 (UltiKits/UltiMenu#12).",
+  "menu.log.button_no_item": "Button %s in %s has no item specified, skipping",
+  "menu.log.button_invalid_material": "Button %s in %s has invalid material: %s, skipping"
 }

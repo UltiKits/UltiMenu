@@ -43,6 +43,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `language: en` now applies to the `/menu` command description and to the refusal a console sender
+  gets from `/menu <name>`, which showed a Chinese sentence in every language because neither had an
+  English entry (UltiKits/UltiMenu#11); and to the five `/menu help` lines and the menu service's
+  display name, which were fixed Chinese text. `language: zh` now also applies to the title a menu
+  file without `title` gets (`Menu`) and to the console lines written while menu files load, which
+  were fixed English text: an invalid menu size, a button with no item or an unknown material, a
+  failed copy of the example menu, and the warning about a leftover `command` key. Their English wording is
+  unchanged; under `language: zh` they are Chinese, except the file name, path and offending value,
+  which are printed as written.
+- `language: en` 现在对 `/menu` 命令描述、以及控制台执行 `/menu <name>` 时收到的拒绝提示生效（二者都没有英文条目，
+  因此任何语言下都显示中文句子，UltiKits/UltiMenu#11）；也对 `/menu help` 的五行帮助与菜单服务的显示名称（原先写死为中文）生效。
+  `language: zh` 现在也对未写 `title` 的菜单文件所得的默认标题（`Menu`）以及加载菜单文件时写出的控制台日志生效（原先写死为英文）：
+  菜单大小无效、按钮未指定物品或物品材质无效、复制示例菜单失败，以及残留 `command` 键的警告。
+  英文措辞不变；`language: zh` 下为中文，只有文件名、路径与出错的取值按原样打印。
+
 - Uninstalling this module with `/upm uninstall UltiTools-Menu` now really removes its commands
   (`/menu`) and stops its bound-item listener from firing; this module has no unload work of its
   own. Previously this module's empty unload method replaced the framework's, so both stayed active

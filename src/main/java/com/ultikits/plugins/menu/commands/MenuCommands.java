@@ -123,11 +123,11 @@ public class MenuCommands extends BaseCommandExecutor {
      */
     @Override
     protected void handleHelp(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "=== UltiMenu 命令帮助 ===");
-        sender.sendMessage(ChatColor.AQUA + "/menu <name>" + ChatColor.WHITE + " - 打开指定菜单");
-        sender.sendMessage(ChatColor.AQUA + "/menu open <name>" + ChatColor.WHITE + " - 打开指定菜单（显式）");
-        sender.sendMessage(ChatColor.AQUA + "/menu list" + ChatColor.WHITE + " - 列出所有可用菜单");
-        sender.sendMessage(ChatColor.AQUA + "/menu reload" + ChatColor.WHITE + " - 重新加载菜单配置（需要管理员权限）");
+        sender.sendMessage(ChatColor.GOLD + plugin.i18n("menu.help.header"));
+        sender.sendMessage(ChatColor.AQUA + "/menu <name>" + ChatColor.WHITE + " - " + plugin.i18n("menu.help.quick_open"));
+        sender.sendMessage(ChatColor.AQUA + "/menu open <name>" + ChatColor.WHITE + " - " + plugin.i18n("menu.help.open"));
+        sender.sendMessage(ChatColor.AQUA + "/menu list" + ChatColor.WHITE + " - " + plugin.i18n("menu.help.list"));
+        sender.sendMessage(ChatColor.AQUA + "/menu reload" + ChatColor.WHITE + " - " + plugin.i18n("menu.help.reload"));
     }
 
     /**

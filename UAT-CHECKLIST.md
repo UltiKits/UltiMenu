@@ -14,9 +14,9 @@ real-machine verification, not user-facing documentation.
 - **Columns:** `ID`, `Preconditions`, `Steps`, `Expected`, `Layer`, `Covers`.
 - **ID:** cites its `FEATURES.md` ID verbatim. A negative case suffixes the checklist ID only, as
   `.neg-<slug>` — a negative case still tests the same feature, so the base ID is unchanged.
-- **Layer**, copied verbatim from Laojun's own `ultitools-real-client-uat` skill so no translation
+- **Layer**, copied verbatim from the real-client acceptance tooling's fixed vocabulary so no translation
   step exists at dispatch time: `protocol`, `java-client`, `os-input`, `pixel`, `server`, `human`.
-  **This module's own division of labor across those values (D-19):** a row asserting that
+  **This module's own division of labor across those values:** a row asserting that
   specific items, in specific slots, with specific names/lore/colors, appear inside the rendered
   GUI is `pixel` — nothing short of a real client window and a validated screenshot settles
   "does the menu look right", and this module's whole product is that GUI. A row asserting that a
@@ -26,16 +26,15 @@ real-machine verification, not user-facing documentation.
   dispatched command, a chat/console message) is `server`. No row in this document is downgraded
   from `pixel` to `protocol` to make it easier to run — an unready pixel harness is a legitimate
   `human-uat-pending` exit; a `protocol` assertion standing in for a rendering claim is not.
-- **Human-authenticated-session rows (D-27b):** none exist in this module — it has no capability
+- **Human-authenticated-session rows:** none exist in this module — it has no capability
   gated behind the maintainer's own UltiCloud panel session or an SMTP-gated recovery flow. Stated
   here for template consistency with the framework's own checklist.
-- **Covers** back-references a Phase 9 GUI-excluded class name; left blank when no such class
-  applies. This module's excluded class is `CustomMenuGui`
-  (`.planning/phases/09-module-ecosystem-readiness-and-test-coverage/gui-exclusions/UltiMenu.md`)
-  — every row below whose `Source` cites that class carries it in `Covers`.
+- **Covers** back-references a GUI class excluded from the JaCoCo coverage gate; left blank when no such class
+  applies. This module's excluded class is `CustomMenuGui` — every row below whose `Source` cites
+  that class carries it in `Covers`.
 - A row whose Preconditions name a prior row must appear after that row in file order — asserted
   mechanically: for every row, every checklist ID cited in its Preconditions cell must have a
-  strictly smaller line number in this file than the row citing it (sweep class 8, D-27a).
+  strictly smaller line number in this file than the row citing it.
 - **The shipped `example` menu is obtained, not assumed.** A row whose Preconditions name the shipped
   `example` menu, or `menus/example.yml` at its shipped content, means the file THIS build writes. Obtain
   it by deleting the module's whole `menus/` folder (`plugins/UltiTools/pluginConfig/UltiTools-Menu/menus/`)
@@ -48,7 +47,7 @@ real-machine verification, not user-facing documentation.
   `ultimenu.config.menu-definition-yml` and its `.neg-removed-command` row read that line; every other
   row gives the same verdict on the old file, but runs from the regenerated one anyway, so that every
   row starts from one fixture.
-- **Config-per-file rule (D-06):** one checklist row per `@ConfigEntity`-annotated class or per
+- **Config-per-file rule:** one checklist row per `@ConfigEntity`-annotated class or per
   shipped-format yml file, never one row per key. Two such rows exist here: `ultimenu.config.
   config-yml` (the one `@ConfigEntity` class) and `ultimenu.config.menu-definition-yml` (the
   runtime-parsed menu-definition format, exercised through the shipped `menus/example.yml`).

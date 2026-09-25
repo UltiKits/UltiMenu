@@ -139,7 +139,7 @@ class CustomMenuGuiTest {
     // ==================== Placeholder Parsing Tests ====================
 
     @Test
-    @DisplayName("A menu with no title opens with the language file's default title (gate-1 IN-01)")
+    @DisplayName("A menu with no title opens with the language file's default title")
     void untitledMenuUsesTheCatalogueTitle() {
         MenuDefinition menu = createMinimalMenu();
         menu.setTitle(null);

@@ -161,8 +161,8 @@ public class CustomMenuGui extends Gui {
         // player may not enter it — are decided from state the click does not change, so there is
         // no reason for either to happen after money has moved. Placing them last meant a button
         // with a price charged for a navigation it then refused, with no refund
-        // (gate 1 CR-01 for the access refusal, which this change introduced; the same ordering
-        // has always applied to the not-found refusal, UltiKits/UltiMenu#20).
+        // (for the access refusal, which this change introduced; the same ordering has always
+        // applied to the not-found refusal, UltiKits/UltiMenu#20).
         // 在扣费和执行命令之前解析并校验子菜单：这两种拒绝都不依赖本次点击改变的状态。
         MenuDefinition subMenu = null;
         String openMenu = button.getOpenMenu();

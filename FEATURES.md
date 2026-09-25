@@ -102,8 +102,8 @@ robust command is still used, because it must work unmodified across all 18 repo
 `onPlayerInteract`), and `MenuConfig.java` (1 `@ConfigEntry` site at line 14: `click_cooldown_ms`)
 directly, not by trusting the count alone. This document's command-row count matches the
 `@CmdMapping` annotation-site count exactly (4 against 4). The `@ConfigEntry` line is the one
-line this repository's pull request's own Annotation-site reconciliation table (D-07 — carried in
-the pull request BODY, not in this file) leaves deliberately unbalanced: 1 annotation site
+line this repository's pull request's own Annotation-site reconciliation table (carried in the
+pull request BODY, not in this file) leaves deliberately unbalanced: 1 annotation site
 against 19 `config` rows below (1 for `click_cooldown_ms` itself, plus 18 `menu-definition` rows)
 — the reason is stated once, here and in that pull request table: this module's real
 configuration surface is a runtime-parsed menu-definition format that no annotation binds, see the
@@ -168,9 +168,8 @@ undefined `HashMap` iteration order — `MenuServiceImpl#menus` is a plain `Hash
 ## GUI Rendering
 
 `CustomMenuGui` (`com.ultikits.plugins.menu.gui.CustomMenuGui`, package `com.ultikits.plugins.menu.gui`)
-— the one class Phase 9's GUI-exclusion register removes from this module's JaCoCo `check` gate
-(`.planning/phases/09-module-ecosystem-readiness-and-test-coverage/gui-exclusions/UltiMenu.md`),
-and per D-19 this module's primary demonstration of the pixel evidence channel: nothing about
+— the one class excluded from this module's JaCoCo `check` gate, and this module's primary
+demonstration of the pixel evidence channel: nothing about
 "does the menu look right" is answerable at the protocol layer. Every button placed in the GUI
 carries its own click handler assembled from the button's own configuration (see the
 `menu-definition` `buttons.*` config rows) — permission, price, player/console commands,

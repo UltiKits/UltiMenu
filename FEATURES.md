@@ -102,8 +102,8 @@ robust command is still used, because it must work unmodified across all 18 repo
 `onPlayerInteract`), and `MenuConfig.java` (1 `@ConfigEntry` site at line 14: `click_cooldown_ms`)
 directly, not by trusting the count alone. This document's command-row count matches the
 `@CmdMapping` annotation-site count exactly (4 against 4). The `@ConfigEntry` line is the one
-line this repository's pull request's own Annotation-site reconciliation table (D-07 — carried in
-the pull request BODY, not in this file) leaves deliberately unbalanced: 1 annotation site
+line this repository's pull request's own Annotation-site reconciliation table (carried in the
+pull request BODY, not in this file) leaves deliberately unbalanced: 1 annotation site
 against 19 `config` rows below (1 for `click_cooldown_ms` itself, plus 18 `menu-definition` rows)
 — the reason is stated once, here and in that pull request table: this module's real
 configuration surface is a runtime-parsed menu-definition format that no annotation binds, see the
@@ -111,9 +111,8 @@ Conventions entry above.
 
 ## Menu Commands
 
-`MenuCommands` — class-level `@CmdExecutor(permission = "ultikits.menu.use", description = <a
-Chinese literal, translated here per D-02's English-only rule as "menu management commands">,
-alias = {"menu"})`, `@CmdTarget(BOTH)`. Per-command target and sender-type handling is inconsistent
+`MenuCommands` — class-level `@CmdExecutor(permission = "ultikits.menu.use", description =
+"menu.command.description", alias = {"menu"})`, `@CmdTarget(BOTH)`. Per-command target and sender-type handling is inconsistent
 by design across the four mappings (see each row's own note), the same pattern the framework's own
 `FEATURES.md` and `Modules/UltiChat/FEATURES.md` document for their own wildcard-vs-exact-literal
 command classes. `ultikits.menu.use` reaches the two opening
@@ -123,17 +122,17 @@ framework gate protects this one class, while the module's rule has to hold for 
 and `open-menu` paths too, which do not pass through it (see
 `ultimenu.config.menu-definition.permission`).
 `CommandManager#registerAll` (`plugin.i18n(cmdExecutor.description())`) runs this
-description literal through `i18n(...)` before handing it to Bukkit as the registered command's own
-description — and this specific literal has no `lang/en.json` entry either, the same defect class
-as `ultimenu.menu.quick-open.neg-console`'s message (see `UAT-CHECKLIST.md`); both are filed under
-the same issue, `UltiKits/UltiMenu#11`.
+description key through `i18n(...)` before handing it to Bukkit as the registered command's own
+description, so it follows the `language` setting: `Menu management command` under `language: en`.
+Before `UltiKits/UltiMenu#11` was fixed the description was a Chinese sentence with no `lang/en.json`
+entry, so it stayed Chinese under every language, as did `ultimenu.menu.quick-open`'s console refusal.
 
 **Note on `/menu help` and bare `/menu`:** `BaseCommandExecutor#onCommand` short-circuits a literal
 `help` argument to `MenuCommands#handleHelp` before format-matching runs (the same short-circuit
-the framework's own `FEATURES.md` documents for `/ul help`). `handleHelp` sends four lines of
-hardcoded Chinese text with no `i18n(...)` call at all, so `/menu help` never localizes regardless
-of the `language` setting — unlike this module's four real commands below, every one of which
-routes its player-facing text through `i18n(...)`. This document's command-row count is fixed at
+the framework's own `FEATURES.md` documents for `/ul help`). `handleHelp` sends a header and four
+command lines through `i18n(...)`, like every player-facing line of this module's four real commands
+below, so `/menu help` follows the `language` setting (exercised by `ultimenu.i18n.language` in
+`UAT-CHECKLIST.md`); before 6.3.0 these five lines were fixed Chinese text. This document's command-row count is fixed at
 exactly 4 (matching the 4 real `@CmdMapping` sites 1:1), with no added short-circuit-only row, the
 same deliberate scope decision `Modules/UltiChat/FEATURES.md` records for its own `help`
 short-circuits.
@@ -151,7 +150,7 @@ below exercises it.
 |---|---|---|---|---|---|---|---|---|
 | ultimenu.menu.list | List every loaded menu's file name and (color-translated) title | command | `/menu list` | ultikits.menu.use | both | player | brief | MenuCommands#onList |
 | ultimenu.menu.open | Open a named menu by its file-stem name, refusing a console sender before doing any work (`@CmdTarget(PLAYER)` on this mapping — Bukkit's own `SenderTypeValidator` rejects console here, not a hand-written check) | command | `/menu open <name>` | ultikits.menu.use | player | player | brief | MenuCommands#onOpen |
-| ultimenu.menu.quick-open | Shorthand for `ultimenu.menu.open`: open a named menu directly as `/menu <name>`. Accepts `@CmdTarget(BOTH)` at the mapping (unlike `onOpen`) and hand-checks `sender instanceof Player` itself, sending an i18n-keyed refusal to a console sender instead of relying on the framework's sender-type validator — see `ultimenu.menu.quick-open.neg-console` in `UAT-CHECKLIST.md` for why this specific refusal message never actually localizes | command | `/menu <name>` | ultikits.menu.use | both | player | brief | MenuCommands#onQuickOpen |
+| ultimenu.menu.quick-open | Shorthand for `ultimenu.menu.open`: open a named menu directly as `/menu <name>`. Accepts `@CmdTarget(BOTH)` at the mapping (unlike `onOpen`) and hand-checks `sender instanceof Player` itself, sending an i18n-keyed refusal to a console sender instead of relying on the framework's sender-type validator — see `ultimenu.menu.quick-open.neg-console` in `UAT-CHECKLIST.md`; the refusal follows the `language` setting (`Only players can open menus!` under `language: en`), which before `UltiKits/UltiMenu#11` was fixed it did not | command | `/menu <name>` | ultikits.menu.use | both | player | brief | MenuCommands#onQuickOpen |
 | ultimenu.menu.reload | Reload every menu definition file from disk (see `ultimenu.config.menu-definition.*` below for what "definition" covers) and report the new menu count. Gated by TWO permission checks — see this row's own Permission cell for the mechanism split | command | `/menu reload` | ultikits.menu.use + ultikits.menu.admin (hand-checked, not framework-validated) | both | admin | brief | MenuCommands#onReload |
 
 ## Item Binding
@@ -169,9 +168,8 @@ undefined `HashMap` iteration order — `MenuServiceImpl#menus` is a plain `Hash
 ## GUI Rendering
 
 `CustomMenuGui` (`com.ultikits.plugins.menu.gui.CustomMenuGui`, package `com.ultikits.plugins.menu.gui`)
-— the one class Phase 9's GUI-exclusion register removes from this module's JaCoCo `check` gate
-(`.planning/phases/09-module-ecosystem-readiness-and-test-coverage/gui-exclusions/UltiMenu.md`),
-and per D-19 this module's primary demonstration of the pixel evidence channel: nothing about
+— the one class excluded from this module's JaCoCo `check` gate, and this module's primary
+demonstration of the pixel evidence channel: nothing about
 "does the menu look right" is answerable at the protocol layer. Every button placed in the GUI
 carries its own click handler assembled from the button's own configuration (see the
 `menu-definition` `buttons.*` config rows) — permission, price, player/console commands,
@@ -230,7 +228,21 @@ they differ meaningfully.
 | ultimenu.config.menu-definition.buttons.player-commands | Commands dispatched as the clicking player (`Player#performCommand`), `{player}` replaced with the player's own name and PlaceholderAPI-resolved ONLY IF PlaceholderAPI is installed (see `ultimenu.menu.render`'s own note; `{player}` always resolves regardless), executed synchronously in the click handler (not deferred a tick, unlike `console-commands`) | config | `menus/<name>.yml: buttons.<id>.player-commands (default: empty list)` | n/a | n/a | admin | none | MenuServiceImpl#parseButton |
 | ultimenu.config.menu-definition.buttons.position | The button's inventory slot index (0-based, within the menu's total `size` slots); no bounds validation against `size` is performed by the parser itself — Bukkit's own inventory API is what would reject an out-of-range slot | config | `menus/<name>.yml: buttons.<id>.position (default: 0)` | n/a | n/a | admin | brief | MenuServiceImpl#parseButton |
 | ultimenu.config.menu-definition.buttons.price | Vault currency amount withdrawn from the clicking player before running the button's commands; `0` (the default) skips the economy check entirely — no Vault dependency, no balance check, for a free button | config | `menus/<name>.yml: buttons.<id>.price (default: 0.0 — no charge)` | n/a | n/a | admin | brief | MenuServiceImpl#parseButton |
-| ultimenu.config.menu-definition.command | Removed in 6.3.0 (`UltiKits/UltiMenu#12`). The key used to be parsed and stored on the menu definition and read by nothing — no command was ever registered from it, so a value such as the old shipped example's `servermenu` never created a `/servermenu` command. It is no longer parsed into the menu definition, and the shipped `menus/example.yml` no longer sets it. A menu opens only through `/menu <name>`, `/menu open <name>`, a matching bound item, or another menu's `open-menu` button (see `ultimenu.menu.submenu-open`); a menu's own slash command is requested as `UltiKits/UltiMenu#23`. The parser still reads the key for one purpose: when a menu file carries it at the top level with a value, every load of that file — each start and each `/menu reload`, before the file's own validation, so also for a file that then fails to load — logs one WARNING containing `UltiMenu: 'command' in <that file's path> no longer has any effect and can be deleted from the file`, which also names where a menu is opened instead and cites `UltiKits/UltiMenu#23` and `UltiKits/UltiMenu#12`. One line per file that carries the key; nothing for a file that does not. It does not fire on `/ul reload`: that runs the framework's own reload, which never re-parses menu files, so only a start or `/menu reload` shows it. That trigger is why this report is catalogued on the key's own row rather than as a `lifecycle.removed-key-warning` row like the other modules', whose checks do run on `/ul reload`. Not seen: a key written with no value or a YAML null (`command:`, `command: null`, `command: ~`), which Bukkit's loader drops and which always read back as absent; and a `command` key nested under a button, which is not this key | config | `menus/<name>.yml: command (removed — no effect; a file still carrying it is reported at every load)` | n/a | n/a | admin | detailed | MenuServiceImpl#warnIfRemovedKeysPresent |
+| ultimenu.config.menu-definition.command | Removed in 6.3.0 (`UltiKits/UltiMenu#12`). The key used to be parsed and stored on the menu definition and read by nothing — no command was ever registered from it, so a value such as the old shipped example's `servermenu` never created a `/servermenu` command. It is no longer parsed into the menu definition, and the shipped `menus/example.yml` no longer sets it. A menu opens only through `/menu <name>`, `/menu open <name>`, a matching bound item, or another menu's `open-menu` button (see `ultimenu.menu.submenu-open`); a menu's own slash command is requested as `UltiKits/UltiMenu#23`. The parser still reads the key for one purpose: when a menu file carries it at the top level with a value, every load of that file — each start and each `/menu reload`, before the file's own validation, so also for a file that then fails to load — logs one WARNING — under `language: en` it contains `UltiMenu: 'command' in <that file's path> no longer has any effect and can be deleted from the file` (the line comes from the language catalogue, so under `language: zh` it is Chinese, still naming `'command'` and the path) — which also names where a menu is opened instead and cites `UltiKits/UltiMenu#23` and `UltiKits/UltiMenu#12`. One line per file that carries the key; nothing for a file that does not. It does not fire on `/ul reload`: that runs the framework's own reload, which never re-parses menu files, so only a start or `/menu reload` shows it. That trigger is why this report is catalogued on the key's own row rather than as a `lifecycle.removed-key-warning` row like the other modules', whose checks do run on `/ul reload`. Not seen: a key written with no value or a YAML null (`command:`, `command: null`, `command: ~`), which Bukkit's loader drops and which always read back as absent; and a `command` key nested under a button, which is not this key | config | `menus/<name>.yml: command (removed — no effect; a file still carrying it is reported at every load)` | n/a | n/a | admin | detailed | MenuServiceImpl#warnIfRemovedKeysPresent |
 | ultimenu.config.menu-definition.permission | Permission required to open this menu. Read here by `MenuServiceImpl#parseMenuFile`; applied by `MenuAccess#allowOpen`, which is the single rule all three open paths call before the GUI is constructed — the command paths (`MenuCommands#openMenuByName`), the bound-item path (`ItemBindListener#tryOpenMenuForItem`), and a parent menu's `open-menu` button (`CustomMenuGui#handleButtonClick`). That rule is `ultikits.menu.use` AND this key when it is set, so an unset or empty key means "any player holding `ultikits.menu.use`", never "any player at all". Before `UltiKits/UltiMenu#14` and `UltiKits/UltiMenu#15` were fixed the three paths disagreed: only the command path required `ultikits.menu.use` (through `MenuCommands`'s class-level `@CmdExecutor`, which gates that class and nothing else), the bound-item path checked this key alone, and the `open-menu` path checked neither | config | `menus/<name>.yml: permission (default: unset — no per-menu check beyond the base node, on any path)` | n/a | n/a | admin | detailed | MenuServiceImpl#parseMenuFile |
 | ultimenu.config.menu-definition.size | Inventory row count × 9, validated to be 9-54 and an exact multiple of 9; a file with an invalid size is rejected entirely (logged warning, the whole menu fails to load — no partial load) | config | `menus/<name>.yml: size (default: 27, valid range 9-54, multiple of 9)` | n/a | n/a | admin | brief | MenuServiceImpl#parseMenuFile |
-| ultimenu.config.menu-definition.title | The menu's inventory title, `&`-color-coded and `{player}`-resolved before display; a PlaceholderAPI token resolves ONLY IF PlaceholderAPI is installed (see `ultimenu.menu.render`'s own note) | config | `menus/<name>.yml: title (default: "Menu")` | n/a | n/a | admin | brief | MenuServiceImpl#parseMenuFile |
+| ultimenu.config.menu-definition.title | The menu's inventory title, `&`-color-coded and `{player}`-resolved before display; a PlaceholderAPI token resolves ONLY IF PlaceholderAPI is installed (see `ultimenu.menu.render`'s own note) | config | `menus/<name>.yml: title (default: unset — shown as the language file's default title, Menu under language: en and 菜单 under language: zh, resolved each time the menu is shown)` | n/a | n/a | admin | brief | MenuServiceImpl#parseMenuFile |
+
+## Language
+
+Every chat line, the command description, the menu service's display name, the default menu title
+and every console line this module writes goes through the framework's language catalogue, so it
+follows the framework-wide `language` setting (`plugins/UltiTools/config.yml`). Keys are ASCII
+(`menu.list.header`); two JUnit guards (`UltiMenuLanguageCatalogueTest`,
+`UltiMenuCjkLiteralScopeTest`) fail the build when a key is missing from either catalogue or Chinese
+text appears outside one. Text an operator writes into `menus/*.yml` (titles, button names, lore) is
+the operator's own content and is shown as written.
+
+| ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
+|---|---|---|---|---|---|---|---|---|
+| ultimenu.i18n.language | All of this module's chat, command-description and console text in the server's language: `lang/en.json` under `language: en`, `lang/zh.json` under `language: zh` | config | framework `config.yml: language` | n/a | both | admin | none | `lang/en.json`, `lang/zh.json`, every `i18n(...)` call |

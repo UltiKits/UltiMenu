@@ -7,6 +7,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Language keys were renamed from Chinese sentences to ASCII keys (for example `menu.list.header`).
+  An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
+  the new keys; until then the renamed messages show the new built-in text. A server whose language
+  files were never edited needs no action.
+- 语言键已从中文句子改为 ASCII 键（例如 `menu.list.header`）。改过本模块 `lang/en.json` 或
+  `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
+
 ### Removed
 
 - The per-menu `command` key never took effect and has been removed; it can be deleted from existing
@@ -33,6 +42,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   之前会一直看到针对该文件的这条警告（UltiKits/UltiMenu#12）。
 
 ### Fixed
+
+- `language: en` now applies to the `/menu` command description and to the refusal a console sender
+  gets from `/menu <name>`, which showed a Chinese sentence in every language because neither had an
+  English entry (UltiKits/UltiMenu#11); and to the five `/menu help` lines and the menu service's
+  display name, which were fixed Chinese text. `language: zh` now also applies to the title a menu
+  file without `title` gets (`Menu`) and to the console lines written while menu files load, which
+  were fixed English text: an invalid menu size, a button with no item or an unknown material, a
+  failed copy of the example menu, and the warning about a leftover `command` key. Their English wording is
+  unchanged; under `language: zh` they are Chinese, except the file name, path and offending value,
+  which are printed as written.
+- `language: en` 现在对 `/menu` 命令描述、以及控制台执行 `/menu <name>` 时收到的拒绝提示生效（二者都没有英文条目，
+  因此任何语言下都显示中文句子，UltiKits/UltiMenu#11）；也对 `/menu help` 的五行帮助与菜单服务的显示名称（原先写死为中文）生效。
+  `language: zh` 现在也对未写 `title` 的菜单文件所得的默认标题（`Menu`）以及加载菜单文件时写出的控制台日志生效（原先写死为英文）：
+  菜单大小无效、按钮未指定物品或物品材质无效、复制示例菜单失败，以及残留 `command` 键的警告。
+  英文措辞不变；`language: zh` 下为中文，只有文件名、路径与出错的取值按原样打印。
 
 - Uninstalling this module with `/upm uninstall UltiTools-Menu` now really removes its commands
   (`/menu`) and stops its bound-item listener from firing; this module has no unload work of its

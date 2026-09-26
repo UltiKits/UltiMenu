@@ -11,6 +11,7 @@ import java.util.Collections;
 
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
+import com.ultikits.plugins.menu.i18n.CatalogueText;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -37,7 +38,7 @@ class ItemBindListenerTest {
     void setUp() {
         mockPlugin = mock(UltiToolsPlugin.class);
         mockMenuService = mock(MenuService.class);
-        when(mockPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(mockPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
 
         listener = new ItemBindListener(mockPlugin, mockMenuService);
     }
@@ -57,9 +58,9 @@ class ItemBindListenerTest {
 
         // Off-hand fixture: ItemBindListener only ever reads getType() on this value (to check
         // it is not AIR before deciding whether to try matching a menu against it), never
-        // getItemMeta()/getDisplayName()/getLore() — see the line-59 attribution in
-        // 14-LEDGER-UltiMenu.md. A mock stubbed for that one accessor is fully faithful and
-        // needs no live Bukkit registry, unlike a real `new ItemStack(Material.AIR)`.
+        // getItemMeta()/getDisplayName()/getLore(). A mock stubbed for that one accessor is
+        // fully faithful and needs no live Bukkit registry, unlike a real `new
+        // ItemStack(Material.AIR)`.
         ItemStack offHandItem = mock(ItemStack.class);
         when(offHandItem.getType()).thenReturn(Material.AIR);
 

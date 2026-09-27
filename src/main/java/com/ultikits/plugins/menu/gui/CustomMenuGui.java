@@ -46,7 +46,7 @@ public class CustomMenuGui extends Gui {
     public CustomMenuGui(Player player, UltiToolsPlugin plugin, MenuDefinition menuDefinition, MenuService menuService) {
         super(player,
               "custom_menu_" + menuDefinition.getFileName(),
-              ChatColor.translateAlternateColorCodes('&', parsePlaceholders(player, menuDefinition.getTitle())),
+              ChatColor.translateAlternateColorCodes('&', parsePlaceholders(player, menuDefinition.displayTitle(plugin))),
               menuDefinition.getSize() / 9);
         this.player = player;
         this.plugin = plugin;
@@ -152,7 +152,7 @@ public class CustomMenuGui extends Gui {
         // 权限检查
         String permission = button.getPermission();
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            player.sendMessage(ChatColor.RED + plugin.i18n("你没有权限使用此按钮！"));
+            player.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_button"));
             return;
         }
 
@@ -161,15 +161,15 @@ public class CustomMenuGui extends Gui {
         // player may not enter it — are decided from state the click does not change, so there is
         // no reason for either to happen after money has moved. Placing them last meant a button
         // with a price charged for a navigation it then refused, with no refund
-        // (gate 1 CR-01 for the access refusal, which this change introduced; the same ordering
-        // has always applied to the not-found refusal, UltiKits/UltiMenu#20).
+        // (for the access refusal, which this change introduced; the same ordering has always
+        // applied to the not-found refusal, UltiKits/UltiMenu#20).
         // 在扣费和执行命令之前解析并校验子菜单：这两种拒绝都不依赖本次点击改变的状态。
         MenuDefinition subMenu = null;
         String openMenu = button.getOpenMenu();
         if (openMenu != null && !openMenu.isEmpty()) {
             subMenu = menuService.getMenu(openMenu);
             if (subMenu == null) {
-                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("菜单 '%s' 不存在！"), openMenu));
+                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("menu.error.not_found"), openMenu));
                 return;
             }
 
@@ -185,21 +185,21 @@ public class CustomMenuGui extends Gui {
         double price = button.getPrice();
         if (price > 0) {
             if (!EconomyUtils.isAvailable()) {
-                player.sendMessage(ChatColor.RED + plugin.i18n("经济系统不可用！"));
+                player.sendMessage(ChatColor.RED + plugin.i18n("menu.economy.unavailable"));
                 return;
             }
 
             if (!EconomyUtils.has(player, price)) {
-                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("余额不足！需要 %s"), EconomyUtils.format(price)));
+                player.sendMessage(ChatColor.RED + String.format(plugin.i18n("menu.economy.insufficient"), EconomyUtils.format(price)));
                 return;
             }
 
             if (!EconomyUtils.withdraw(player, price)) {
-                player.sendMessage(ChatColor.RED + plugin.i18n("扣款失败！"));
+                player.sendMessage(ChatColor.RED + plugin.i18n("menu.economy.withdraw_failed"));
                 return;
             }
 
-            player.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("已扣除 %s"), EconomyUtils.format(price)));
+            player.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("menu.economy.charged"), EconomyUtils.format(price)));
         }
 
         // Execute player commands

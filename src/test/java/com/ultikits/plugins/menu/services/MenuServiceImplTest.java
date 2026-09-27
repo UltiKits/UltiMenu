@@ -21,6 +21,7 @@ import java.util.List;
 
 import com.ultikits.plugins.menu.model.ButtonDefinition;
 import com.ultikits.plugins.menu.model.MenuDefinition;
+import com.ultikits.plugins.menu.i18n.CatalogueText;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import com.ultikits.ultitools.interfaces.impl.logger.PluginLogger;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -49,7 +50,7 @@ class MenuServiceImplTest {
         mockLogger = mock(PluginLogger.class);
         when(mockPlugin.getLogger()).thenReturn(mockLogger);
         when(mockPlugin.getResourceFolderPath()).thenReturn(tempDir.toFile().getAbsolutePath());
-        when(mockPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(mockPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("en"));
 
         menusFolder = new File(tempDir.toFile(), "menus");
         menusFolder.mkdirs();

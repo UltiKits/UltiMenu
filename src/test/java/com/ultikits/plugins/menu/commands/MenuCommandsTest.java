@@ -12,6 +12,7 @@ import java.util.*;
 import com.ultikits.plugins.menu.MenuAccess;
 import com.ultikits.plugins.menu.model.MenuDefinition;
 import com.ultikits.plugins.menu.services.MenuService;
+import com.ultikits.plugins.menu.i18n.CatalogueText;
 import com.ultikits.ultitools.abstracts.UltiToolsPlugin;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -32,7 +33,7 @@ class MenuCommandsTest {
     void setUp() {
         mockPlugin = mock(UltiToolsPlugin.class);
         mockMenuService = mock(MenuService.class);
-        when(mockPlugin.i18n(anyString())).thenAnswer(inv -> inv.getArgument(0));
+        when(mockPlugin.i18n(anyString())).thenAnswer(CatalogueText.answer("zh"));
 
         commands = new MenuCommands(mockPlugin, mockMenuService);
     }

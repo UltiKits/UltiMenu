@@ -57,7 +57,7 @@ UltiMenu 是基于 UltiTools-API 框架开发的自定义菜单插件模块，�
 1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.2.0+
 2. 将 `UltiMenu-1.0.0.jar` 放入 `plugins/UltiTools/plugins/` 目录
 3. 重启服务器或使用 `/ul reload` 重载插件
-4. 首次启动会在 `menus/` 目录生成 `example.yml` 示例菜单
+4. 首次启动会在 `menus/` 目录生成 `example.yml` 示例菜单，语言与服务器的 `language` 设置一致（目前有中文和英文；其它语言使用英文版），已有的 `menus/` 目录不会被改动 / On first start, `menus/example.yml` is created in the server's `language` (Chinese or English; any other language gets the English one); an existing `menus/` folder is never touched
 
 **或通过 UPM 安装:**
 ```

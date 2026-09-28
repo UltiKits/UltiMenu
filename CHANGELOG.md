@@ -9,6 +9,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The example menu copied into a new `menus/` folder at first start now follows the server's
+  `language`: the jar ships `menus/en/example.yml` and `menus/zh/example.yml`, and a language without
+  its own example gets the English one. It was English whatever `language` said. An existing `menus/`
+  folder is never touched, so existing installs keep the menus they have (UltiKits/UltiMenu#26).
+- 首次启动时复制到新建 `menus/` 目录的示例菜单现在跟随服务器的 `language`：jar 内附带 `menus/en/example.yml` 与
+  `menus/zh/example.yml`，没有对应语言的示例时使用英文版。此前无论 `language` 为何都是英文。已有的 `menus/` 目录不会被改动，
+  现有安装保留原有菜单（UltiKits/UltiMenu#26）。
+
 - Language keys were renamed from Chinese sentences to ASCII keys (for example `menu.list.header`).
   An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
   the new keys; until then the renamed messages show the new built-in text. A server whose language

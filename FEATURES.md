@@ -212,6 +212,13 @@ identically). Defaults below are this parser's own fallback when a key is absent
 the shipped `menus/example.yml`'s own values, which are also given per row for the one row where
 they differ meaningfully.
 
+The shipped example is copied into a `menus/` folder the module creates on its first start, in the
+server's `language`: the jar ships `menus/en/example.yml` (title `Server Menu`) and
+`menus/zh/example.yml` (title `服务器菜单`), which define the same menu apart from their text, and a
+language it has no example for gets the English one. An existing `menus/` folder is never touched, so a
+`language` switch never rewrites a menu file already on disk (`MenuServiceImpl#copyExampleMenu`; before
+`UltiKits/UltiMenu#26` the one shipped example was English under every language).
+
 | ID | Feature | Kind | How to reach | Permission | Target | Tier | Manual | Source |
 |---|---|---|---|---|---|---|---|---|
 | ultimenu.config.menu-definition.bind-item | Item type (Bukkit `Material` name, case-insensitive) that, held in either hand, triggers opening this menu on right-click; an unrecognized material name is silently ignored (parsed as absent, `bindItem` stays `null`, no binding for that menu) | config | `menus/<name>.yml: bind-item (default: unset — no binding)` | n/a | n/a | admin | brief | MenuServiceImpl#parseMenuFile |

@@ -32,6 +32,9 @@ public class MenuServiceImpl implements MenuService {
      */
     private static final String REMOVED_COMMAND_KEY = "command";
 
+    /** The example menu copied when the jar ships none for the server's language. */
+    private static final String EXAMPLE_MENU_FALLBACK = "menus/en/example.yml";
+
     public MenuServiceImpl(UltiToolsPlugin plugin) {
         this.plugin = plugin;
         this.logger = plugin.getLogger();
@@ -115,11 +118,23 @@ public class MenuServiceImpl implements MenuService {
     }
 
     /**
-     * Copy example menu from resources to menus folder.
-     * 从资源文件复制示例菜单到菜单文件夹
+     * Copies the example menu into a menus folder this start just created - the jar's example for the
+     * server's {@code language}, or the English one when the module ships none for it, which is the
+     * fallback its messages use too. One example per language follows the maintainer's decision of
+     * 2026-09-25 for the example kit (UltiKits/UltiKits#33), applied here: the single shipped file was
+     * English under {@code language: zh} (UltiKits/UltiMenu#26). A folder that already exists is never
+     * touched, so existing installs keep the menus they have.
+     * <p>
+     * 首次启动时按服务器语言复制示例菜单；没有对应语言时使用英文版；已有的菜单文件夹不受影响。
      */
     private void copyExampleMenu(File folder) {
-        try (InputStream is = plugin.getClass().getClassLoader().getResourceAsStream("menus/example.yml")) {
+        ClassLoader loader = MenuServiceImpl.class.getClassLoader();
+        String language = plugin.getLanguageCode();
+        String resource = EXAMPLE_MENU_FALLBACK;
+        if (language != null && loader.getResource("menus/" + language + "/example.yml") != null) {
+            resource = "menus/" + language + "/example.yml";
+        }
+        try (InputStream is = loader.getResourceAsStream(resource)) {
             File exampleFile = new File(folder, "example.yml");
             if (is != null && !exampleFile.exists()) {
                 Files.copy(is, exampleFile.toPath());

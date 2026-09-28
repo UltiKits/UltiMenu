@@ -732,15 +732,112 @@ class MenuServiceImplTest {
         }
 
         private InputStream shippedExampleStream() {
+            // The English example; one example per language ships since UltiKits/UltiMenu#26
             InputStream in = MenuServiceImplTest.class.getClassLoader()
-                .getResourceAsStream("menus/example.yml");
-            assertThat(in).as("shipped menus/example.yml on the test classpath").isNotNull();
+                .getResourceAsStream("menus/en/example.yml");
+            assertThat(in).as("shipped menus/en/example.yml on the test classpath").isNotNull();
             return in;
         }
 
         private YamlConfiguration loadShippedExample() throws IOException {
             try (Reader reader = new InputStreamReader(shippedExampleStream(), StandardCharsets.UTF_8)) {
                 return YamlConfiguration.loadConfiguration(reader);
+            }
+        }
+    }
+
+    // ==================== UltiKits/UltiMenu#26 ====================
+
+    @Nested
+    @DisplayName("the first-start example menu follows the server's language (UltiKits/UltiMenu#26)")
+    class ExampleFollowsLanguage {
+
+        private String firstStartExample(String language) throws IOException {
+            deleteMenusFolder();
+            when(mockPlugin.getLanguageCode()).thenReturn(language);
+            createService();
+            File example = new File(menusFolder, "example.yml");
+            assertThat(example).as("example copied at first start").exists();
+            return new String(Files.readAllBytes(example.toPath()), StandardCharsets.UTF_8);
+        }
+
+        private void deleteMenusFolder() throws IOException {
+            File[] files = menusFolder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    Files.delete(file.toPath());
+                }
+            }
+            Files.delete(menusFolder.toPath());
+        }
+
+        private String shipped(String resource) throws IOException {
+            try (InputStream in = MenuServiceImplTest.class.getClassLoader().getResourceAsStream(resource)) {
+                assertThat(in).as("%s on the test classpath", resource).isNotNull();
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                byte[] buffer = new byte[4096];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                }
+                return new String(out.toByteArray(), StandardCharsets.UTF_8);
+            }
+        }
+
+        @Test
+        @DisplayName("language zh copies the Chinese example")
+        void chinese() throws IOException {
+            String copied = firstStartExample("zh");
+
+            assertThat(copied).isEqualTo(shipped("menus/zh/example.yml"));
+            assertThat(YamlConfiguration.loadConfiguration(new java.io.StringReader(copied)).getString("title"))
+                    .contains("服务器菜单");
+        }
+
+        @Test
+        @DisplayName("language en copies the English example")
+        void english() throws IOException {
+            String copied = firstStartExample("en");
+
+            assertThat(copied).isEqualTo(shipped("menus/en/example.yml"));
+            assertThat(YamlConfiguration.loadConfiguration(new java.io.StringReader(copied)).getString("title"))
+                    .contains("Server Menu");
+        }
+
+        @Test
+        @DisplayName("a language with no example of its own gets the English one")
+        void otherLanguageFallsBackToEnglish() throws IOException {
+            assertThat(firstStartExample("fr")).isEqualTo(shipped("menus/en/example.yml"));
+        }
+
+        @Test
+        @DisplayName("an existing menus folder is left alone")
+        void existingFolderIsLeftAlone() throws IOException {
+            when(mockPlugin.getLanguageCode()).thenReturn("zh");
+            writeMenuYaml("own.yml", "title: Mine\nsize: 9\nbuttons: {}\n");
+
+            createService();
+
+            assertThat(new File(menusFolder, "example.yml")).doesNotExist();
+        }
+
+        @Test
+        @DisplayName("both examples define the same menu: same size, bound item, buttons, positions and commands")
+        void examplesMatchInEverythingButText() throws IOException {
+            YamlConfiguration en = YamlConfiguration.loadConfiguration(new java.io.StringReader(shipped("menus/en/example.yml")));
+            YamlConfiguration zh = YamlConfiguration.loadConfiguration(new java.io.StringReader(shipped("menus/zh/example.yml")));
+
+            assertThat(zh.getInt("size")).isEqualTo(en.getInt("size"));
+            assertThat(zh.getString("bind-item")).isEqualTo(en.getString("bind-item"));
+            assertThat(zh.getConfigurationSection("buttons").getKeys(false))
+                    .containsExactlyElementsOf(en.getConfigurationSection("buttons").getKeys(false));
+            for (String button : en.getConfigurationSection("buttons").getKeys(false)) {
+                String path = "buttons." + button + ".";
+                for (String key : new String[] {"item", "position", "price", "close-on-click", "open-menu"}) {
+                    assertThat(zh.get(path + key)).as(path + key).isEqualTo(en.get(path + key));
+                }
+                assertThat(zh.getStringList(path + "player-commands")).isEqualTo(en.getStringList(path + "player-commands"));
+                assertThat(zh.getStringList(path + "console-commands")).isEqualTo(en.getStringList(path + "console-commands"));
             }
         }
     }

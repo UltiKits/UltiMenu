@@ -9,6 +9,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- A player refused a menu because he lacks `ultikits.menu.use` is now told so by name: "You don't have
+  permission to open this menu: you need ultikits.menu.use." A menu's own `permission` key still gives
+  "You don't have permission to open this menu!". Both refusals used the second line, so neither the
+  player nor an operator could tell which node to grant (UltiKits/UltiMenu#21).
+- 因缺少 `ultikits.menu.use` 而被拒绝打开菜单的玩家，现在会看到点名该权限的提示：「你没有权限打开此菜单：需要
+  ultikits.menu.use。」菜单自身的 `permission` 键仍给出「你没有权限打开此菜单！」。此前两种拒绝都用后者，玩家和运维都无法
+  判断应授予哪个权限（UltiKits/UltiMenu#21）。
+
 - The example menu copied into a new `menus/` folder at first start now follows the server's
   `language`: the jar ships `menus/en/example.yml` and `menus/zh/example.yml`, and a language without
   its own example gets the English one. It was English whatever `language` said. An existing `menus/`

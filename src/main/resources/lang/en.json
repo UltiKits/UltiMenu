@@ -6,6 +6,7 @@
   "menu.log.loaded_count": "Loaded %d menus",
   "menu.error.not_found": "Menu '%s' does not exist!",
   "menu.error.no_permission_open": "You don't have permission to open this menu!",
+  "menu.error.no_permission_base": "You don't have permission to open this menu: you need %s.",
   "menu.error.no_permission_button": "You don't have permission to use this button!",
   "menu.error.no_permission_command": "You don't have permission to execute this command!",
   "menu.economy.unavailable": "Economy system is not available!",

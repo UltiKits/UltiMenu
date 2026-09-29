@@ -392,6 +392,41 @@ class MenuCommandsTest {
             verify(player, never()).sendMessage(anyString());
         }
 
+        private String onlyMessage(Player player) {
+            org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+            verify(player).sendMessage(captor.capture());
+            return captor.getValue();
+        }
+
+        @Test
+        @DisplayName("A missing base node is refused with its own line naming ultikits.menu.use (UltiKits/UltiMenu#21)")
+        void baseNodeRefusalNamesTheNode() {
+            givenLoadedMenu("open-to-all", null);
+            Player player = givenPlayer();
+            when(player.hasPermission(BASE_NODE)).thenReturn(false);
+
+            commands.onOpen(player, "open-to-all");
+
+            String sent = onlyMessage(player);
+            assertThat(sent).contains(BASE_NODE);
+            assertThat(sent).isNotEqualTo(org.bukkit.ChatColor.RED
+                    + com.ultikits.plugins.menu.i18n.CatalogueText.text("zh", "menu.error.no_permission_open"));
+        }
+
+        @Test
+        @DisplayName("A missing per-menu node keeps the per-menu refusal line (UltiKits/UltiMenu#21)")
+        void menuNodeRefusalStaysAsItWas() {
+            givenLoadedMenu("vip", "vip.menu");
+            Player player = givenPlayer();
+            when(player.hasPermission(BASE_NODE)).thenReturn(true);
+            when(player.hasPermission("vip.menu")).thenReturn(false);
+
+            commands.onOpen(player, "vip");
+
+            assertThat(onlyMessage(player)).isEqualTo(org.bukkit.ChatColor.RED
+                    + com.ultikits.plugins.menu.i18n.CatalogueText.text("zh", "menu.error.no_permission_open"));
+        }
+
         @Test
         @DisplayName("Should apply the same rule to the /menu <name> shorthand mapping")
         void shouldApplySameRuleToQuickOpen() {

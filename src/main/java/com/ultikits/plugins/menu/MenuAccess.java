@@ -69,20 +69,20 @@ public final class MenuAccess {
         Objects.requireNonNull(menu, "menu must not be null");
 
         if (!player.hasPermission(BASE_PERMISSION)) {
-            deny(plugin, player);
+            // Its own line, naming the node: without it nothing in the module opens, so it is the one
+            // to grant; the per-menu line below cannot say which of the two was missing
+            // (UltiKits/UltiMenu#21)
+            player.sendMessage(ChatColor.RED
+                    + String.format(plugin.i18n("menu.error.no_permission_base"), BASE_PERMISSION));
             return false;
         }
 
         String permission = menu.getPermission();
         if (permission != null && !permission.isEmpty() && !player.hasPermission(permission)) {
-            deny(plugin, player);
+            player.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_open"));
             return false;
         }
 
         return true;
-    }
-
-    private static void deny(UltiToolsPlugin plugin, Player player) {
-        player.sendMessage(ChatColor.RED + plugin.i18n("menu.error.no_permission_open"));
     }
 }

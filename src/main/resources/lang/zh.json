@@ -6,6 +6,7 @@
   "menu.log.loaded_count": "共加载 %d 个菜单",
   "menu.error.not_found": "菜单 '%s' 不存在！",
   "menu.error.no_permission_open": "你没有权限打开此菜单！",
+  "menu.error.no_permission_base": "你没有权限打开此菜单：需要 %s。",
   "menu.error.no_permission_button": "你没有权限使用此按钮！",
   "menu.error.no_permission_command": "你没有权限执行此命令！",
   "menu.economy.unavailable": "经济系统不可用！",

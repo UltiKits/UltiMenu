@@ -10,7 +10,9 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.ultikits.plugins.menu.MockBukkitSupport;
 import com.ultikits.plugins.menu.config.MenuConfig;
@@ -38,13 +40,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.MockedStatic;
 import org.mockbukkit.mockbukkit.MockBukkit;
+import org.mockbukkit.mockbukkit.ServerMock;
 
 @DisplayName("CustomMenuGui Tests")
 class CustomMenuGuiTest {
 
     private Player mockPlayer;
+    private ServerMock server;
+    private Plugin ultiTools;
 
     @BeforeEach
     void setUp() {
@@ -63,7 +69,8 @@ class CustomMenuGuiTest {
         // The bootstrap is kept because it gives MockBukkitSupport a second real consumer besides
         // UltiMenuRegistrySentinelTest, so a break in the module's one shared test-time bootstrap
         // shows up here too rather than only in the sentinel.
-        MockBukkitSupport.mock();
+        server = MockBukkitSupport.mock();
+        ultiTools = null;
         mockPlayer = mock(Player.class);
         when(mockPlayer.getName()).thenReturn("TestPlayer");
     }
@@ -125,6 +132,37 @@ class CustomMenuGuiTest {
         Method method = CustomMenuGui.class.getDeclaredMethod("handleButtonClick", ButtonDefinition.class);
         method.setAccessible(true);
         method.invoke(gui, button);
+    }
+
+    /**
+     * Makes the framework plugin the module schedules its deferred work on exist, once per test: a
+     * MockBukkit plugin named {@code UltiTools}, the name {@code CustomMenuGui} looks it up by.
+     */
+    private Plugin registerUltiTools() {
+        if (ultiTools == null) {
+            ultiTools = MockBukkit.createMockPlugin("UltiTools");
+        }
+        return ultiTools;
+    }
+
+    /**
+     * Runs one server tick on the live MockBukkit scheduler: everything a click scheduled with
+     * {@code runTask} runs now, in the order it was scheduled.
+     */
+    private void runNextTick() {
+        server.getScheduler().performOneTick();
+    }
+
+    /**
+     * Clicks the button and then lets the next tick run, with the framework plugin registered, so a
+     * test asserting what the click ended up dispatching sees both what it did inside the click and
+     * what it deferred. Without the plugin a deferred command is never scheduled, which would make
+     * every "never dispatched" assertion pass for the wrong reason.
+     */
+    private void clickAndSettle(CustomMenuGui gui, ButtonDefinition button) throws Exception {
+        registerUltiTools();
+        callHandleButtonClick(gui, button);
+        runNextTick();
     }
 
     /**
@@ -320,7 +358,7 @@ class CustomMenuGuiTest {
             ButtonDefinition button = new ButtonDefinition();
             button.getPlayerCommands().add("test");
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             // Nothing should happen - no commands executed
             verify(mockPlayer, never()).performCommand(anyString());
@@ -341,7 +379,7 @@ class CustomMenuGuiTest {
             button.setCloseOnClick(false);
             button.getPlayerCommands().add("spawn");
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             verify(mockPlayer).performCommand("spawn");
         }
@@ -560,7 +598,7 @@ class CustomMenuGuiTest {
             givenReachableSubMenu(menuService);
             ButtonDefinition button = givenPaidButtonWithFollowUps(100.0);
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
@@ -593,7 +631,7 @@ class CustomMenuGuiTest {
             givenReachableSubMenu(menuService);
             ButtonDefinition button = givenPaidButtonWithFollowUps(50.0);
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(mockPlayer, atLeastOnce()).sendMessage(captor.capture());
@@ -631,7 +669,7 @@ class CustomMenuGuiTest {
             when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
             when(mockPlayer.hasPermission("menu.vip")).thenReturn(false);
 
-            callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+            clickAndSettle(gui, givenPaidButtonWithFollowUps(500.0));
 
             // 1. the balance is untouched - the economy provider was never asked to withdraw
             verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
@@ -666,7 +704,7 @@ class CustomMenuGuiTest {
 
             when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
 
-            callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+            clickAndSettle(gui, givenPaidButtonWithFollowUps(500.0));
 
             verify(mockEconomy, never()).withdrawPlayer(any(OfflinePlayer.class), anyDouble());
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
@@ -703,7 +741,16 @@ class CustomMenuGuiTest {
             when(mockPlayer.hasPermission(BASE_NODE)).thenReturn(true);
             when(mockPlayer.hasPermission("menu.vip")).thenReturn(true);
 
+            registerUltiTools();
             callHandleButtonClick(gui, givenPaidButtonWithFollowUps(500.0));
+
+            // The sub-menu's opening is the last task the click schedules, after the button's player
+            // command. This test is about the charge and the command; the opening needs a live
+            // inventory API a unit test does not start, so it is cancelled before the tick.
+            List<BukkitTask> scheduled = server.getScheduler().getPendingTasks();
+            assertThat(scheduled).isNotEmpty();
+            scheduled.get(scheduled.size() - 1).cancel();
+            runNextTick();
 
             verify(mockEconomy).withdrawPlayer(mockPlayer, 500.0);
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
@@ -749,6 +796,83 @@ class CustomMenuGuiTest {
     @DisplayName("Button Command Tests")
     class ButtonCommandTests {
 
+        // UltiKits/UltiMenu#28. Since UltiTools-Reborn#541 a module command called with
+        // Player#performCommand runs its body inside the call. Inside InventoryClickEvent Paper does
+        // not allow opening or closing an inventory, so the button's player commands are scheduled
+        // with runTask, as its console commands and sub-menu already were. The tests run the real
+        // MockBukkit scheduler: "inside the click" is what has happened when the handler returns,
+        // "next tick" is what has happened after one performOneTick().
+
+        @Test
+        @DisplayName("Player commands are not dispatched inside the click; the next tick runs them in order, placeholders replaced")
+        void playerCommandsAreDeferredPastTheClick() throws Exception {
+            registerUltiTools();
+            CustomMenuGui gui = createGui(createMinimalMenu(), createMockPlugin(null), mock(MenuService.class));
+
+            ButtonDefinition button = new ButtonDefinition();
+            button.setCloseOnClick(false);
+            button.getPlayerCommands().add("give {player} diamond 1");
+            button.getPlayerCommands().add("spawn");
+
+            callHandleButtonClick(gui, button);
+
+            verify(mockPlayer, never()).performCommand(anyString());
+
+            runNextTick();
+
+            InOrder order = inOrder(mockPlayer);
+            order.verify(mockPlayer).performCommand("give TestPlayer diamond 1");
+            order.verify(mockPlayer).performCommand("spawn");
+            verify(mockPlayer, times(2)).performCommand(anyString());
+        }
+
+        @Test
+        @DisplayName("A button that closes the menu closes it first; its player command runs after the close")
+        void playerCommandRunsAfterTheMenuCloses() throws Exception {
+            registerUltiTools();
+            CustomMenuGui gui = createGui(createMinimalMenu(), createMockPlugin(null), mock(MenuService.class));
+
+            ButtonDefinition button = new ButtonDefinition();
+            button.setCloseOnClick(true);
+            button.getPlayerCommands().add("spawn");
+
+            callHandleButtonClick(gui, button);
+
+            verify(mockPlayer).closeInventory();
+            verify(mockPlayer, never()).performCommand(anyString());
+
+            runNextTick();
+
+            InOrder order = inOrder(mockPlayer);
+            order.verify(mockPlayer).closeInventory();
+            order.verify(mockPlayer).performCommand("spawn");
+        }
+
+        @Test
+        @DisplayName("A player command that opens another menu leaves that menu open: the close happened before it")
+        void aCommandThatOpensAnotherMenuIsNotClosedByTheButton() throws Exception {
+            registerUltiTools();
+            AtomicBoolean otherMenuOpen = new AtomicBoolean(false);
+            doAnswer(invocation -> {
+                otherMenuOpen.set(true);
+                return true;
+            }).when(mockPlayer).performCommand("kits");
+            doAnswer(invocation -> {
+                otherMenuOpen.set(false);
+                return null;
+            }).when(mockPlayer).closeInventory();
+            CustomMenuGui gui = createGui(createMinimalMenu(), createMockPlugin(null), mock(MenuService.class));
+
+            ButtonDefinition button = new ButtonDefinition();
+            button.setCloseOnClick(true);
+            button.getPlayerCommands().add("kits");
+
+            callHandleButtonClick(gui, button);
+            runNextTick();
+
+            assertThat(otherMenuOpen).as("the menu the command opened is still open after the button's own close").isTrue();
+        }
+
         @Test
         @DisplayName("Should execute player commands with {player} replaced")
         void shouldExecutePlayerCommands() throws Exception {
@@ -762,7 +886,7 @@ class CustomMenuGuiTest {
             button.getPlayerCommands().add("give {player} diamond 1");
             button.getPlayerCommands().add("spawn");
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             verify(mockPlayer).performCommand("give TestPlayer diamond 1");
             verify(mockPlayer).performCommand("spawn");
@@ -780,7 +904,7 @@ class CustomMenuGuiTest {
             button.setCloseOnClick(false);
             // playerCommands is empty by default
 
-            callHandleButtonClick(gui, button);
+            clickAndSettle(gui, button);
 
             verify(mockPlayer, never()).performCommand(anyString());
         }

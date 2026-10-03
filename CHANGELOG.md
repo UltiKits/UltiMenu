@@ -9,6 +9,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- A menu button's `player-commands` now run on the next server tick, after the click and after the
+  menu has closed, like its `console-commands` and `open-menu` already did. UltiTools 6.3.0 runs a
+  module command's body at the moment it is dispatched, and Paper does not allow an inventory to be
+  opened or closed inside a click, so a button whose command opens another module's menu (for example
+  `player-commands: ["kits"]`) would otherwise have failed to open it or had it closed straight away.
+  The commands keep their order and their `{player}`/PlaceholderAPI replacement; the only difference
+  is that the effects of the command now come one tick after the click (UltiKits/UltiMenu#28).
+- 菜单按钮的 `player-commands` 现在在点击并关闭菜单之后的下一个服务器 tick 执行，与 `console-commands`、`open-menu`
+  一致。UltiTools 6.3.0 在命令被分派的那一刻就运行模块命令的正文，而 Paper 不允许在点击过程中打开或关闭背包，所以打开其他模块
+  菜单的按钮（例如 `player-commands: ["kits"]`）原本会打开失败或被立刻关掉。命令的顺序与 `{player}`/PlaceholderAPI 替换不变，
+  唯一区别是命令的效果比点击晚一个 tick（UltiKits/UltiMenu#28）。
+
 - A player refused a menu because he lacks `ultikits.menu.use` is now told so by name: "You don't have
   permission to open this menu: you need ultikits.menu.use." A menu's own `permission` key still gives
   "You don't have permission to open this menu!". Both refusals used the second line, so neither the

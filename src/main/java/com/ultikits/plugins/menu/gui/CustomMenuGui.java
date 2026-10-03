@@ -202,14 +202,23 @@ public class CustomMenuGui extends Gui {
             player.sendMessage(ChatColor.GREEN + String.format(plugin.i18n("menu.economy.charged"), EconomyUtils.format(price)));
         }
 
-        // Execute player commands
-        // 执行玩家命令
+        // Execute player commands on the next tick, like the console commands and the sub-menu below.
+        // A command of an UltiTools module runs its body at dispatch (UltiTools-Reborn#541), so run
+        // here it would be inside the InventoryClickEvent, where Paper does not allow opening or
+        // closing an inventory: a button whose command opens another module's menu would fail to open
+        // it, or have it closed by the closeInventory() below. One task per command keeps their order.
+        // 在下一个 tick 执行玩家命令，与下方的控制台命令和子菜单一致：模块命令在分派时即运行命令正文，
+        // 在点击事件内运行会触发 Paper 对点击处理中开关背包的限制 (UltiKits/UltiMenu#28)。
         List<String> playerCommands = button.getPlayerCommands();
         if (playerCommands != null && !playerCommands.isEmpty()) {
-            for (String cmd : playerCommands) {
-                String processedCmd = cmd.replace("{player}", player.getName());
-                processedCmd = parsePlaceholders(player, processedCmd);
-                player.performCommand(processedCmd);
+            org.bukkit.plugin.Plugin ultiToolsPlugin = Bukkit.getPluginManager().getPlugin("UltiTools");
+            if (ultiToolsPlugin != null) {
+                for (String cmd : playerCommands) {
+                    String processedCmd = cmd.replace("{player}", player.getName());
+                    processedCmd = parsePlaceholders(player, processedCmd);
+                    String finalCmd = processedCmd;
+                    Bukkit.getScheduler().runTask(ultiToolsPlugin, () -> player.performCommand(finalCmd));
+                }
             }
         }
 

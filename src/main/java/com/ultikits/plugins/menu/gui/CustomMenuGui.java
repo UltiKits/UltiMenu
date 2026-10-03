@@ -204,11 +204,13 @@ public class CustomMenuGui extends Gui {
 
         // Execute player commands on the next tick, like the console commands and the sub-menu below.
         // A command of an UltiTools module runs its body at dispatch (UltiTools-Reborn#541), so run
-        // here it would be inside the InventoryClickEvent, where Paper does not allow opening or
-        // closing an inventory: a button whose command opens another module's menu would fail to open
-        // it, or have it closed by the closeInventory() below. One task per command keeps their order.
+        // here it would be inside the InventoryClickEvent, where an inventory a command opens does not
+        // open reliably, and the closeInventory() below would then close it: a button whose command
+        // opens another module's menu would fail to open it or lose it. The button's own close stays in
+        // the click, so it always happens before these tasks and never closes a menu a command opened.
+        // One task per command keeps their order.
         // 在下一个 tick 执行玩家命令，与下方的控制台命令和子菜单一致：模块命令在分派时即运行命令正文，
-        // 在点击事件内运行会触发 Paper 对点击处理中开关背包的限制 (UltiKits/UltiMenu#28)。
+        // 在点击事件内运行会使命令打开的菜单打开失败或被下方的 closeInventory() 关掉 (UltiKits/UltiMenu#28)。
         List<String> playerCommands = button.getPlayerCommands();
         if (playerCommands != null && !playerCommands.isEmpty()) {
             org.bukkit.plugin.Plugin ultiToolsPlugin = Bukkit.getPluginManager().getPlugin("UltiTools");

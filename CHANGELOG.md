@@ -9,6 +9,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- A menu button's `player-commands` now run on the next server tick, after the click and after the
+  menu has closed, like its `console-commands` and `open-menu` already did. UltiTools 6.3.0 runs a
+  module command's body at the moment it is dispatched, so a command run inside the click would have
+  opened its menu inside the click event and the button's own close would then have shut it: a button
+  whose command opens another module's menu (for example `player-commands: ["kits"]`) would have failed
+  to open it or lost it straight away.
+  The commands keep their order and their `{player}`/PlaceholderAPI replacement; the only difference
+  is that the effects of the command now come one tick after the click (UltiKits/UltiMenu#28).
+- 菜单按钮的 `player-commands` 现在在点击并关闭菜单之后的下一个服务器 tick 执行，与 `console-commands`、`open-menu`
+  一致。UltiTools 6.3.0 在命令被分派的那一刻就运行模块命令的正文，在点击中执行会让命令在点击事件内打开菜单，随后按钮自己的关闭
+  又会把它关掉，所以打开其他模块菜单的按钮（例如 `player-commands: ["kits"]`）原本会打开失败或被立刻关掉。命令的顺序与 `{player}`/PlaceholderAPI 替换不变，
+  唯一区别是命令的效果比点击晚一个 tick（UltiKits/UltiMenu#28）。
+
 - A player refused a menu because he lacks `ultikits.menu.use` is now told so by name: "You don't have
   permission to open this menu: you need ultikits.menu.use." A menu's own `permission` key still gives
   "You don't have permission to open this menu!". Both refusals used the second line, so neither the
@@ -26,11 +39,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   现有安装保留原有菜单（UltiKits/UltiMenu#26）。
 
 - Language keys were renamed from Chinese sentences to ASCII keys (for example `menu.list.header`).
-  An operator who edited this module's `lang/en.json` or `lang/zh.json` must re-apply those edits to
-  the new keys; until then the renamed messages show the new built-in text. A server whose language
-  files were never edited needs no action.
-- 语言键已从中文句子改为 ASCII 键（例如 `menu.list.header`）。改过本模块 `lang/en.json` 或
-  `lang/zh.json` 的运维需要把改动重新套到新键上；在此之前，这些消息显示新的内置文本。从未改过语言文件的服务器无需任何操作。
+  If you customised this module's messages in your own language file -- a copy of an official file
+  whose name starts with that file's language code and a hyphen (for example `lang/zh-myserver.json`),
+  selected with `language: zh-myserver` in `plugins/UltiTools/config.yml` -- re-apply those edits to the new
+  keys; until then each renamed message shows the text of the official language the name starts with. A copy
+  whose name does not start with an official language code and a hyphen is still read, but every message
+  it lacks then shows in English, with one warning. An edit made directly in an official
+  language file (`lang/en.json`, `lang/zh.json`) is not kept: the framework restores the official files at
+  every start and on every module reload and keeps the edited file as `.bak` (UltiKits/UltiTools-Reborn#616). A server that never
+  customised messages needs no action.
+- 语言键已从中文句子改为 ASCII 键（例如 `menu.list.header`）。如果你在自己的语言文件中自定义过本模块的消息——即把官方文件复制一份，文件名以该文件的语言代码加连字符开头
+  （例如 `lang/zh-myserver.json`），并在 `plugins/UltiTools/config.yml` 中设置 `language: zh-myserver` 选择它——请把改动重新套到新键上；
+  在此之前，改名的消息显示文件名开头那种官方语言的文本。文件名不以官方语言代码加连字符开头的副本仍会被读取，但其中缺少的消息
+  都显示英文，并记录一条警告。
+  直接在官方语言文件（`lang/en.json`、`lang/zh.json`）中做的修改不会保留：框架会在每次启动以及每次模块重载时恢复官方文件，并把修改过的文件
+  保留为 `.bak`（UltiKits/UltiTools-Reborn#616）。从未自定义过消息的服务器无需任何操作。
 
 ### Removed
 

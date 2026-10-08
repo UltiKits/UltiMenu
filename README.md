@@ -1,8 +1,8 @@
 # UltiMenu
 
-[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.2.0-blue)](https://github.com/UltiKits/UltiTools-Reborn)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.8--1.21-green)](https://www.spigotmc.org/)
-[![Java](https://img.shields.io/badge/Java-8+-orange)](https://www.java.com/)
+[![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
+[![Paper](https://img.shields.io/badge/Paper-1.21%2B-green)](https://papermc.io/)
+[![Java](https://img.shields.io/badge/Java-21%2B-orange)](https://adoptium.net/)
 
 UltiMenu 是基于 UltiTools-API 框架开发的自定义菜单插件模块，允许服务器管理员通过 YAML 配置文件创建任意数量的 GUI 菜单，支持按钮命令、经济扣费、子菜单跳转、物品绑定和 PlaceholderAPI 变量。
 
@@ -54,7 +54,7 @@ UltiMenu 是基于 UltiTools-API 框架开发的自定义菜单插件模块，�
 
 ## 📦 安装
 
-1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.2.0+
+1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.3.0 或更高版本。本模块声明 `api-version: 630`，更早的框架会拒绝加载它
 2. 将 `UltiMenu-1.0.0.jar` 放入 `plugins/UltiTools/plugins/` 目录
 3. 重启服务器或使用 `/ul reload` 重载插件
 4. 首次启动会在 `menus/` 目录生成 `example.yml` 示例菜单，语言与服务器的 `language` 设置一致（目前有中文和英文；其它语言使用英文版），已有的 `menus/` 目录不会被改动 / On first start, `menus/example.yml` is created in the server's `language` (Chinese or English; any other language gets the English one); an existing `menus/` folder is never touched

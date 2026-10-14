@@ -1,8 +1,6 @@
 # UltiMenu
 
 [![UltiTools-API](https://img.shields.io/badge/UltiTools--API-6.3.0%2B-blue)](https://github.com/UltiKits/UltiTools-Reborn)
-[![Paper](https://img.shields.io/badge/Paper-1.21%2B-green)](https://papermc.io/)
-[![Java](https://img.shields.io/badge/Java-21%2B-orange)](https://adoptium.net/)
 
 UltiMenu 是基于 UltiTools-API 框架开发的自定义菜单插件模块，允许服务器管理员通过 YAML 配置文件创建任意数量的 GUI 菜单，支持按钮命令、经济扣费、子菜单跳转、物品绑定和 PlaceholderAPI 变量。
 

@@ -5,18 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 本文件记录本项目的所有重要更改，格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
-## [Unreleased]
+## [2.0.0] - 2026-10-21
 
 ### Changed
 
 - This version requires UltiTools 6.3.0 or later and declares `api-version: 630` in `plugin.yml`
-  (it was `620`). An older framework now refuses the module before its start-up runs, with a warning
+  (the released 1.0.0 declared `620`). An older framework now refuses the module before its start-up runs, with a warning
   that the UltiTools version is outdated; the refusal names the module by its `plugin.yml` `name:`,
-  `UltiTools-Menu`. The README's framework minimum and its server and Java badges now say UltiTools
-  6.3.0+, Paper 1.21+ and Java 21+ (UltiKits/UltiTools-Reborn#544).
-- 本版本需要 UltiTools 6.3.0 或更高版本，并在 `plugin.yml` 中声明 `api-version: 630`（原为 `620`）。更早的框架会在模块的启动逻辑
+  `UltiTools-Menu`. The README states the framework minimum as UltiTools 6.3.0 or later
+  (UltiKits/UltiTools-Reborn#544).
+- 本版本需要 UltiTools 6.3.0 或更高版本，并在 `plugin.yml` 中声明 `api-version: 630`（已发布的 1.0.0 声明的是 `620`）。更早的框架会在模块的启动逻辑
   运行之前拒绝加载它，并给出 UltiTools 版本过旧的警告；拒绝信息以 `plugin.yml` 的 `name:` 即 `UltiTools-Menu` 指代本模块。
-  README 中的框架最低版本以及服务端与 Java 徽章已改为 UltiTools 6.3.0+、Paper 1.21+、Java 21+（UltiKits/UltiTools-Reborn#544）。
+  README 标明框架最低版本为 UltiTools 6.3.0 或更高版本（UltiKits/UltiTools-Reborn#544）。
 
 - `plugin.yml` now declares `identify-string: ultimenu`, the key of this module's entry in the
   UltiCloud catalogue. The framework's update check and `/upm update` skip a module that does not
@@ -26,15 +26,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `/upm update` 会跳过未声明该键的模块，因此本模块现在会参与两者：带有同一键的更高发布版本会在启动时提示，
   并可用 `/upm update` 安装（UltiKits/UltiTools-Reborn#474）。
 
-- A menu button's `player-commands` now run on the next server tick, after the click and after the
-  menu has closed, like its `console-commands` and `open-menu` already did. UltiTools 6.3.0 runs a
+- A menu button's `player-commands` now run on the next server tick, after the click and any menu
+  close performed by the button, like its `console-commands` and `open-menu` already did. UltiTools 6.3.0 runs a
   module command's body at the moment it is dispatched, so a command run inside the click would have
   opened its menu inside the click event and the button's own close would then have shut it: a button
   whose command opens another module's menu (for example `player-commands: ["kits"]`) would have failed
   to open it or lost it straight away.
   The commands keep their order and their `{player}`/PlaceholderAPI replacement; the only difference
   is that the effects of the command now come one tick after the click (UltiKits/UltiMenu#28).
-- 菜单按钮的 `player-commands` 现在在点击并关闭菜单之后的下一个服务器 tick 执行，与 `console-commands`、`open-menu`
+- 菜单按钮的 `player-commands` 现在在点击之后的下一个服务器 tick 执行；若按钮会关闭菜单，关闭也先于命令执行，与 `console-commands`、`open-menu`
   一致。UltiTools 6.3.0 在命令被分派的那一刻就运行模块命令的正文，在点击中执行会让命令在点击事件内打开菜单，随后按钮自己的关闭
   又会把它关掉，所以打开其他模块菜单的按钮（例如 `player-commands: ["kits"]`）原本会打开失败或被立刻关掉。命令的顺序与 `{player}`/PlaceholderAPI 替换不变，
   唯一区别是命令的效果比点击晚一个 tick（UltiKits/UltiMenu#28）。

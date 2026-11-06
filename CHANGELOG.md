@@ -5,6 +5,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 本文件记录本项目的所有重要更改，格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)。
 
+## [Unreleased]
+
+### Added
+
+- A menu may explicitly set `open-command: shop` to register `/shop` and `/ultimenu:shop`.
+  Player-only, no arguments, same base and menu permissions as `/menu open <name>`.
+  Bindings follow `/menu reload` (including file deletion/rename) and are removed on module uninstall.
+  Duplicate requests are all refused; `/menu` is reserved; existing command owners and fallback
+  labels are never overwritten. Warnings identify the files or existing owner. Invalid values
+  disable only the binding. See README for accepted names and disabled values (#23).
+- The old `command` key remains inactive and reports a warning; it now points operators to the
+  explicit `open-command` opt-in. Existing menu files are never rewritten and copied legacy
+  examples do not unexpectedly register a command. Shipped examples show only a commented opt-in.
+- 菜单可通过新键 `open-command` 显式绑定独立命令；重载与卸载会清理，权限与普通打开路径相同。
+  重名会拒绝并报告，不覆盖已有命令。旧 `command` 继续无效，已有配置不会自动改写（#23）。
+
 ## [2.0.0] - 2026-10-21
 
 ### Changed

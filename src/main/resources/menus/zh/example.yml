@@ -3,6 +3,9 @@
 size: 27
 title: "&6&l服务器菜单 &r&7- {player}"
 permission: null
+# Optional player-only command (no arguments); requires base and menu permissions.
+# 可选独立命令（仅玩家，无参数）；仍需基础权限与菜单权限。
+# open-command: servermenu
 bind-item: COMPASS
 bind-name: "&6服务器菜单"
 bind-lore: "&e右键打开"

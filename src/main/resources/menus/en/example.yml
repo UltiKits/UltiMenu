@@ -3,6 +3,8 @@
 size: 27
 title: "&6&lServer Menu &r&7- {player}"
 permission: null
+# Optional player-only command (no arguments); requires base and menu permissions.
+# open-command: servermenu
 bind-item: COMPASS
 bind-name: "&6Server Menu"
 bind-lore: "&eRight-click to open"

@@ -26,6 +26,7 @@ public class MenuServiceImpl implements MenuService {
     private final UltiToolsPlugin plugin;
     private final PluginLogger logger;
     private final Map<String, MenuDefinition> menus = new HashMap<>();
+    private final MenuCommandRegistry menuCommands;
 
     /**
      * The per-menu key removed by UltiKits/UltiMenu#12; see {@link #warnIfRemovedKeysPresent}.
@@ -38,12 +39,14 @@ public class MenuServiceImpl implements MenuService {
     public MenuServiceImpl(UltiToolsPlugin plugin) {
         this.plugin = plugin;
         this.logger = plugin.getLogger();
+        this.menuCommands = new MenuCommandRegistry(plugin, this);
         loadMenus();
     }
 
     @Override
     public void loadMenus() {
         menus.clear();
+        Map<String, MenuDefinition> loadedByFile = new TreeMap<>();
 
         File menusFolder = new File(plugin.getResourceFolderPath(), "menus");
         if (!menusFolder.exists()) {
@@ -54,6 +57,7 @@ public class MenuServiceImpl implements MenuService {
         File[] files = menusFolder.listFiles((dir, name) -> name.endsWith(".yml"));
         if (files == null || files.length == 0) {
             logger.warn(plugin.i18n("menu.log.no_files"));
+            menuCommands.replace(loadedByFile);
             return;
         }
 
@@ -65,6 +69,7 @@ public class MenuServiceImpl implements MenuService {
                     String menuName = file.getName().replace(".yml", "").toLowerCase();
                     menu.setFileName(menuName);
                     menus.put(menuName, menu);
+                    loadedByFile.put(file.getName(), menu);
                     logger.info(String.format(plugin.i18n("menu.log.loaded"), menuName));
                     loadedCount++;
                 }
@@ -73,7 +78,14 @@ public class MenuServiceImpl implements MenuService {
             }
         }
 
+        menuCommands.replace(loadedByFile);
         logger.info(String.format(plugin.i18n("menu.log.loaded_count"), loadedCount));
+    }
+
+    /** Removes only this service's command instances when the framework unloads its container. */
+    @com.ultikits.ultitools.annotations.PreDestroy
+    public void unregisterMenuCommands() {
+        menuCommands.close();
     }
 
     @Override
@@ -168,6 +180,14 @@ public class MenuServiceImpl implements MenuService {
         menu.setSize(size);
         menu.setTitle(config.getString("title"));
         menu.setPermission(config.getString("permission"));
+        Object command = config.get("open-command");
+        if (command != null && !"".equals(command)) {
+            if (command instanceof String && ((String) command).matches("[a-zA-Z][a-zA-Z0-9_-]{0,31}")) {
+                menu.setOpenCommand(((String) command).toLowerCase(Locale.ROOT));
+            } else {
+                logger.warn(String.format(plugin.i18n("menu.log.invalid_open_command"), file.getName()));
+            }
+        }
 
         // Parse bind-item
         String bindItemStr = config.getString("bind-item");

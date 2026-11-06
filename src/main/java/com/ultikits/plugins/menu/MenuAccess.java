@@ -18,7 +18,7 @@ import java.util.Objects;
  * </ol>
  * <p>
  * There are three ways into a menu — the {@code /menu}/{@code /menu open} command
- * ({@code MenuCommands#openMenuByName}), a bound item
+ * ({@code MenuCommands#openMenuByName}, also reused by dedicated {@code open-command} bindings), a bound item
  * ({@code ItemBindListener#tryOpenMenuForItem}), and a button's {@code open-menu} key
  * ({@code CustomMenuGui#handleButtonClick}) — and before this class each of the three carried its
  * own idea of the rule. The command path required the base node (through the framework's

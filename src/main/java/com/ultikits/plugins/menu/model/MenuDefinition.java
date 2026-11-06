@@ -14,6 +14,8 @@ public class MenuDefinition {
     /** The title the menu file sets, or {@code null} when it sets none (see {@link #displayTitle}). */
     private String title = null;
     private String permission = null;
+    /** Explicit opt-in command label; unrelated to the removed legacy {@code command} key. */
+    private String openCommand = null;
     private Material bindItem = null;
     private String bindName = null;
     private String bindLore = null;

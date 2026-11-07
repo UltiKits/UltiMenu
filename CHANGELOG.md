@@ -13,10 +13,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (the released 1.0.0 declared `620`). An older framework now refuses the module before its start-up runs, with a warning
   that the UltiTools version is outdated; the refusal names the module by its `plugin.yml` `name:`,
   `UltiTools-Menu`. The README states the framework minimum as UltiTools 6.3.0 or later
-  (UltiKits/UltiTools-Reborn#544).
+  (UltiKits/UltiTools-Reborn#544). Upgrade UltiTools to 6.3.0 before replacing this module's JAR.
 - 本版本需要 UltiTools 6.3.0 或更高版本，并在 `plugin.yml` 中声明 `api-version: 630`（已发布的 1.0.0 声明的是 `620`）。更早的框架会在模块的启动逻辑
   运行之前拒绝加载它，并给出 UltiTools 版本过旧的警告；拒绝信息以 `plugin.yml` 的 `name:` 即 `UltiTools-Menu` 指代本模块。
-  README 标明框架最低版本为 UltiTools 6.3.0 或更高版本（UltiKits/UltiTools-Reborn#544）。
+  README 标明框架最低版本为 UltiTools 6.3.0 或更高版本（UltiKits/UltiTools-Reborn#544）。更换模块 JAR 前请先将 UltiTools 升级到 6.3.0。
 
 - `plugin.yml` now declares `identify-string: ultimenu`, the key of this module's entry in the
   UltiCloud catalogue. The framework's update check and `/upm update` skip a module that does not

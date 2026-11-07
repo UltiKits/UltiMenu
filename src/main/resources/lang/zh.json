@@ -17,6 +17,9 @@
   "menu.list.header": "=== 可用菜单 ===",
   "menu.reload.done": "已重新加载 %d 个菜单",
   "menu.command.description": "菜单管理命令",
+  "menu.command.usage": "用法：/%s",
+  "menu.log.invalid_open_command": "UltiMenu: %s 中的 'open-command' 无效；请使用一个英文字母开头、后接最多 31 个英文字母、数字、下划线或连字符的名称（不含斜杠或命名空间）。已跳过命令绑定。",
+  "menu.log.command_collision": "UltiMenu: 拒绝注册 /%s（来自 %s）；该命令已被 %s 占用。已跳过命令绑定。",
   "menu.error.player_only": "只有玩家才能打开菜单！",
   "menu.help.header": "=== UltiMenu 命令帮助 ===",
   "menu.help.quick_open": "打开指定菜单",
@@ -26,7 +29,7 @@
   "menu.gui.default_title": "菜单",
   "menu.log.copy_example_failed": "复制示例菜单失败: %s",
   "menu.log.invalid_size": "菜单大小 %d 无效（%s），必须在 9-54 之间且为 9 的倍数",
-  "menu.log.removed_command_key": "UltiMenu: %2$s 中的 '%1$s' 已不再生效，可以从文件中删除——菜单通过 /menu <name>、/menu open <name>、绑定物品或其他菜单的 open-menu 按钮打开，本模块从未根据该键注册过任何命令；为菜单单独绑定斜杠命令的需求记录为 UltiKits/UltiMenu#23（UltiKits/UltiMenu#12）。",
+  "menu.log.removed_command_key": "UltiMenu: %2$s 中的 '%1$s' 已不再生效，可以从文件中删除——菜单通过 /menu <name>、/menu open <name>、绑定物品或其他菜单的 open-menu 按钮打开，本模块从未根据该键注册过任何命令；独立命令需要显式设置 'open-command'（UltiKits/UltiMenu#23，UltiKits/UltiMenu#12）。",
   "menu.log.button_no_item": "按钮 %s（%s）未指定物品，已跳过",
   "menu.log.button_invalid_material": "按钮 %s（%s）的物品材质无效: %s，已跳过"
 }

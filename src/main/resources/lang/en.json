@@ -17,6 +17,9 @@
   "menu.list.header": "=== Available Menus ===",
   "menu.reload.done": "Reloaded %d menus",
   "menu.command.description": "Menu management command",
+  "menu.command.usage": "Usage: /%s",
+  "menu.log.invalid_open_command": "UltiMenu: invalid 'open-command' in %s; use a letter followed by up to 31 letters, digits, underscores or hyphens (no slash or namespace). Binding skipped.",
+  "menu.log.command_collision": "UltiMenu: refusing /%s from %s; command already claimed by %s. Binding skipped.",
   "menu.error.player_only": "Only players can open menus!",
   "menu.help.header": "=== UltiMenu Command Help ===",
   "menu.help.quick_open": "Open the named menu",
@@ -26,7 +29,7 @@
   "menu.gui.default_title": "Menu",
   "menu.log.copy_example_failed": "Failed to copy example menu: %s",
   "menu.log.invalid_size": "Invalid menu size %d in %s (must be 9-54 and multiple of 9)",
-  "menu.log.removed_command_key": "UltiMenu: '%s' in %s no longer has any effect and can be deleted from the file -- a menu is opened with /menu <name>, /menu open <name>, a bound item or another menu's open-menu button, and no command was ever registered from this key; a menu's own slash command is requested as UltiKits/UltiMenu#23 (UltiKits/UltiMenu#12).",
+  "menu.log.removed_command_key": "UltiMenu: '%s' in %s no longer has any effect and can be deleted from the file -- a menu is opened with /menu <name>, /menu open <name>, a bound item or another menu's open-menu button, and no command was ever registered from this key; dedicated commands require explicitly setting 'open-command' (UltiKits/UltiMenu#23, UltiKits/UltiMenu#12).",
   "menu.log.button_no_item": "Button %s in %s has no item specified, skipping",
   "menu.log.button_invalid_material": "Button %s in %s has invalid material: %s, skipping"
 }

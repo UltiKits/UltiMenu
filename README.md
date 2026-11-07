@@ -50,6 +50,41 @@ UltiMenu 是基于 UltiTools-API 框架开发的自定义菜单插件模块，�
 | `/menu list` | 列出所有可用菜单 | `ultikits.menu.use` |
 | `/menu reload` | 重新加载所有菜单配置 | `ultikits.menu.admin` |
 
+## Dedicated menu commands / 独立菜单命令
+
+Opt in separately for each menu by adding a top-level key to its definition file:
+
+```yaml
+# menus/shop.yml
+open-command: shop
+permission: server.shop
+```
+
+This registers `/shop` and `/ultimenu:shop` when menus load. The command opens that menu
+for players only, takes no arguments, and requires **both** `ultikits.menu.use` and the menu's
+`permission` when set. Console receives the player-only refusal; extra arguments print
+`Usage: /<label>` without opening a menu. It supplies no argument completions.
+
+- Names start with an ASCII letter and contain at most 32 ASCII letters, digits, `_` or `-`.
+  Names are case-insensitive and stored in lowercase; omit the slash and namespace.
+  Missing, null or empty means disabled. Invalid values warn with the file name and leave the
+  menu available through the existing opening paths.
+- `/menu reload` adds, changes and removes these commands immediately, including when a menu
+  file is renamed, deleted or becomes invalid. Uninstalling the module removes its commands.
+- `/menu` is reserved. If two files request the same command, **neither** binding is registered
+  and a warning names both files. An existing command (including an alias or an occupied
+  `ultimenu:<name>` fallback) is never overwritten; the warning identifies its owner and the
+  requesting file. Choose another name and reload. The menu itself still loads.
+- The old `command` key remains **inactive** and still warns on load. It is not an alias for
+  `open-command`: old copied examples never silently activate `/servermenu`. To enable the new
+  feature, explicitly add `open-command`; no existing menu file is rewritten automatically.
+- The shipped example only comments out `open-command`; fresh installs do not claim a new
+  global command by default.
+
+每个菜单可显式添加 `open-command: shop` 启用 `/shop`；仍需基础权限与菜单权限，只允许玩家无参数调用。
+重载会同步新增、修改和删除，卸载会清理命令。重名时拒绝绑定并报告文件或已有命令的所有者。
+旧 `command` 键继续无效，不会因升级自动启用；现有配置不会被自动改写。
+
 ## 📦 安装
 
 1. 确保服务器已安装 [UltiTools-API](https://github.com/UltiKits/UltiTools-Reborn) 6.3.0 或更高版本。本模块声明 `api-version: 630`，更早的框架会拒绝加载它

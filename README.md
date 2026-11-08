@@ -71,6 +71,10 @@ for players only, takes no arguments, and requires **both** `ultikits.menu.use` 
   menu available through the existing opening paths.
 - `/menu reload` adds, changes and removes these commands immediately, including when a menu
   file is renamed, deleted or becomes invalid. Uninstalling the module removes its commands.
+- Known limitation: on some server versions a binding **added** by `/menu reload` is not
+  usable until the server restarts (players get no suggestion and `Unknown command`;
+  reconnecting does not help). If that happens, restart the server. Details: `FEATURES.md`,
+  `ultimenu.menu.bound-command`.
 - `/menu` is reserved. If two files request the same command, **neither** binding is registered
   and a warning names both files. An existing command (including an alias or an occupied
   `ultimenu:<name>` fallback) is never overwritten; the warning identifies its owner and the
@@ -82,7 +86,7 @@ for players only, takes no arguments, and requires **both** `ultikits.menu.use` 
   global command by default.
 
 每个菜单可显式添加 `open-command: shop` 启用 `/shop`；仍需基础权限与菜单权限，只允许玩家无参数调用。
-重载会同步新增、修改和删除，卸载会清理命令。重名时拒绝绑定并报告文件或已有命令的所有者。
+重载会同步新增、修改和删除，卸载会清理命令。已知限制：在部分服务端版本上，通过 `/menu reload` 新增的绑定要重启服务器后才可用（玩家看不到补全、执行时提示未知命令，重新进服也无效）；遇到时请重启服务器，详见 `FEATURES.md`。重名时拒绝绑定并报告文件或已有命令的所有者。
 旧 `command` 键继续无效，不会因升级自动启用；现有配置不会被自动改写。
 
 ## 📦 安装
